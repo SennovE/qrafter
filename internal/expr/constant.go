@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SennovE/qrafter"
+	"github.com/SennovE/qrafter/internal/core"
 )
 
 type ConstExpression struct {
 	v string
 }
 
-var _ = (Selecter)(ConstExpression{})
+var _ = (core.Selecter)(ConstExpression{})
 
-func (c ConstExpression) Tables() qrafter.TablesSet {
+func (c ConstExpression) Tables() core.TablesSet {
 	return nil
 }
 
@@ -21,7 +21,7 @@ func (c ConstExpression) Render() string {
 	return c.v
 }
 
-func ConstExpr(value any) ConstExpression {
+func Const(value any) ConstExpression {
 	var c ConstExpression
 
 	switch v := value.(type) {

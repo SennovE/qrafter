@@ -4,21 +4,16 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/SennovE/qrafter/utils"
+	"github.com/SennovE/qrafter/internal/core"
+	"github.com/SennovE/qrafter/internal/utils"
 )
-
-type TablesSet = map[TableRef]struct{}
-
-type ColumnBinder interface {
-	Bind(name string, table TableRef)
-}
 
 func Bind[T TableConfigProvider](table T) error {
 	config := table.TableConfig()
-	return bindWithTableRef(table, TableRef{Name: config.Name})
+	return bindWithTableRef(table, core.TableRef{Name: config.Name})
 }
 
-func bindWithTableRef[T any](table T, tableRef TableRef) error {
+func bindWithTableRef[T any](table T, tableRef core.TableRef) error {
 	if tableRef.Name == "" {
 		return fmt.Errorf("table name is empty")
 	}
@@ -41,7 +36,7 @@ func bindWithTableRef[T any](table T, tableRef TableRef) error {
 			continue
 		}
 
-		col, ok := f.Addr().Interface().(ColumnBinder)
+		col, ok := f.Addr().Interface().(core.ColumnBinder)
 		if !ok {
 			continue
 		}

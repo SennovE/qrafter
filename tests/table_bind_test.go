@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/expr"
+	"github.com/SennovE/qrafter/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type User struct {
-	UserName expr.Column[string]
-	Age      expr.Column[string] `db:"userAge"`
+	UserName qrafter.Column[string]
+	Age      qrafter.Column[string] `db:"userAge"`
 
 	Other string
 	meta  string
@@ -29,7 +29,7 @@ func TestTable_Bind(t *testing.T) {
 	require.NoError(t, err, "Bind should not return an error")
 
 	t.Run("Table reference is set", func(t *testing.T) {
-		expectedTable := qrafter.TableRef{
+		expectedTable := core.TableRef{
 			Name:  u.TableConfig().Name,
 			Alias: "",
 		}
@@ -56,7 +56,7 @@ func TestTable_MakeAlias(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Table reference is set with alias", func(t *testing.T) {
-		expectedTable := qrafter.TableRef{
+		expectedTable := core.TableRef{
 			Name:  u.TableConfig().Name,
 			Alias: alias,
 		}

@@ -3,49 +3,46 @@ package main
 import (
 	"fmt"
 
-	"github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/expr"
-	"github.com/SennovE/qrafter/pred"
-	"github.com/SennovE/qrafter/query"
+	q "github.com/SennovE/qrafter"
 )
 
 type User struct {
-	UserName expr.Column[string]
-	Age      expr.Column[int] `db:"user_age"`
+	UserName q.Column[string]
+	Age      q.Column[int] `db:"user_age"`
 
 	Meta string
-	meta expr.Column[int]
+	meta q.Column[int]
 }
 
-func (User) TableConfig() qrafter.TableConfig {
-	return qrafter.TableConfig{
+func (User) TableConfig() q.TableConfig {
+	return q.TableConfig{
 		Name: "user_table",
 	}
 }
 
 func makeUser() User {
 	var user User
-	qrafter.Bind(&user)
+	q.Bind(&user)
 	return user
 }
 
 var user = makeUser()
-var empl, _ = qrafter.TableAlias(user, "empl")
+var empl, _ = q.TableAlias(user, "empl")
 
 func main() {
-	q := query.Select(
+	q := q.Select(
 		user.UserName,
-		expr.As(user.Age, "gage"),
+		q.As(user.Age, "gage"),
 		empl.UserName,
-		expr.Sum(
-			expr.ConstExpr(123),
-			expr.ConstExpr(321),
+		q.Sum(
+			q.Const(123),
+			q.Const(321),
 		),
 	).Where(
-		pred.Eq(user.UserName, expr.ConstExpr("ABC")),
-		pred.And(
-			pred.Ge(expr.ConstExpr("1"), expr.ConstExpr("3")),
-			pred.Ge(expr.ConstExpr("100"), expr.ConstExpr("md")),
+		q.Eq(user.UserName, q.Const("ABC")),
+		q.Or(
+			q.Ge(user.Age, q.Const("1")),
+			q.Eq(q.Const("Test"), user.UserName),
 		),
 	)
 	fmt.Println(q.Render())

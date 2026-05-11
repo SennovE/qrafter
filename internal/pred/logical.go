@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/utils"
+	"github.com/SennovE/qrafter/internal/core"
+	"github.com/SennovE/qrafter/internal/utils"
 )
 
 type LogicalPredicate struct {
-	ps []Predicater
+	ps []core.Predicater
 	op string
 }
 
-var _ = (Predicater)(LogicalPredicate{})
+var _ = (core.Predicater)(LogicalPredicate{})
 
 func (e LogicalPredicate) Predicate() {}
 
@@ -28,17 +28,17 @@ func (e LogicalPredicate) Render() string {
 	return res.String()
 }
 
-func (e LogicalPredicate) Tables() qrafter.TablesSet {
-	tables := make([]qrafter.TablesSet, len(e.ps))
+func (e LogicalPredicate) Tables() core.TablesSet {
+	tables := make([]core.TablesSet, len(e.ps))
 	for i, p := range e.ps {
 		tables[i] = p.Tables()
 	}
 	return utils.UnionSets(tables...)
 }
 
-func And(ps ...Predicater) LogicalPredicate {
+func Logical(op string, ps ...core.Predicater) LogicalPredicate {
 	return LogicalPredicate{
+		op: op,
 		ps: ps,
-		op: "AND",
 	}
 }
