@@ -3,7 +3,7 @@ package core
 import (
 	"sort"
 
-	"github.com/SennovE/qrafter/internal/utils"
+	"github.com/SennovE/qrafter/dialect"
 )
 
 type ColumnBinder interface {
@@ -24,11 +24,11 @@ func (t TableRef) SQLName() string {
 	return t.Alias
 }
 
-func (t TableRef) BuildSQL() string {
+func (t TableRef) Render(d dialect.DialectRenderer) string {
 	if t.Alias == "" {
-		return utils.QuoteIdent(t.Name)
+		return d.QuoteIdent(t.Name)
 	}
-	return utils.QuoteIdent(t.Name) + " AS " + utils.QuoteIdent(t.Alias)
+	return d.QuoteIdent(t.Name) + " AS " + d.QuoteIdent(t.Alias)
 }
 
 func GetSortedTables(tables TablesSet) []TableRef {

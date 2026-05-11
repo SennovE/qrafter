@@ -1,94 +1,57 @@
 package qrafter
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/SennovE/qrafter/dialect"
+	"github.com/SennovE/qrafter/internal/clauses"
 	"github.com/SennovE/qrafter/internal/core"
-	"github.com/SennovE/qrafter/internal/utils"
 )
 
 type SelectQuery struct {
-	colums     []core.Selecter
-	tables     map[core.TableRef]struct{}
-	predicates []core.Predicater
-	limit      int
-	offset     int
+	selectCl      clauses.SelectClause
+	fromCl        clauses.FromClause
+	whereCl       clauses.WhereClause
+	limitOffsetCl clauses.LimitOffsetClause
 }
 
 func Select(cols ...core.Selecter) SelectQuery {
 	q := SelectQuery{
-		colums: cols,
-		tables: make(map[core.TableRef]struct{}, 0),
+		selectCl: clauses.SelectClause{Colums: cols},
 	}
-
-	tables := make([]core.TablesSet, len(cols))
-	for i := 0; i < len(cols); i++ {
-		tables[i] = cols[i].Tables()
-	}
-	q.tables = utils.UnionSets(tables...)
-
+	clauses.UpdateTables(&q.fromCl, cols)
 	return q
 }
 
 func (q SelectQuery) Where(predicates ...core.Predicater) SelectQuery {
-	tables := make([]core.TablesSet, len(predicates)+1)
-	for i := 0; i < len(predicates); i++ {
-		tables[i] = predicates[i].Tables()
-	}
-	tables[len(tables)-1] = q.tables
-	q.tables = utils.UnionSets(tables...)
-
-	q.predicates = append(q.predicates, predicates...)
+	clauses.UpdateTables(&q.fromCl, predicates)
+	q.whereCl.Predicates = append(q.whereCl.Predicates, predicates...)
 	return q
 }
 
 func (q SelectQuery) Limit(l int) SelectQuery {
-	q.limit = l
+	q.limitOffsetCl.Limit = l
 	return q
 }
 
 func (q SelectQuery) Offset(o int) SelectQuery {
-	q.offset = o
+	q.limitOffsetCl.Offset = o
 	return q
 }
 
-func (q SelectQuery) Render() string {
-	var builder strings.Builder
-	builder.WriteString("SELECT ")
+func (q SelectQuery) Render(d dialect.DialectRenderer) string {
+	var w strings.Builder
 
-	for i, col := range q.colums {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(col.Render())
+	clauses := []clauses.Clauser{
+		q.selectCl,
+		q.fromCl,
+		q.whereCl,
+		q.limitOffsetCl,
 	}
 
-	builder.WriteString(" FROM ")
-	for i, table := range core.GetSortedTables(q.tables) {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(table.BuildSQL())
+	for _, cl := range clauses {
+		cl.Render(&w, d)
 	}
 
-	if len(q.predicates) > 0 {
-		builder.WriteString(" WHERE ")
-		for i, pred := range q.predicates {
-			if i > 0 {
-				builder.WriteString(" AND ")
-			}
-			builder.WriteString(pred.Render())
-		}
-	}
-
-	if q.limit > 0 {
-		fmt.Fprintf(&builder, " LIMIT %d", q.limit)
-	}
-
-	if q.offset > 0 {
-		fmt.Fprintf(&builder, " OFFSET %d", q.limit)
-	}
-
-	return builder.String()
+	return w.String()
 }

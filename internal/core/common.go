@@ -1,7 +1,9 @@
 package core
 
+import "github.com/SennovE/qrafter/dialect"
+
 type Renderer interface {
-	Render() string
+	Render(d dialect.DialectRenderer) string
 }
 
 type Selecter interface {

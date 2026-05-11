@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -17,13 +18,13 @@ var _ = (core.Predicater)(LogicalPredicate{})
 
 func (e LogicalPredicate) Predicate() {}
 
-func (e LogicalPredicate) Render() string {
+func (e LogicalPredicate) Render(d dialect.DialectRenderer) string {
 	var res strings.Builder
 	for i, p := range e.ps {
 		if i > 0 {
 			fmt.Fprintf(&res, " %s ", e.op)
 		}
-		res.WriteString(p.Render())
+		res.WriteString(p.Render(d))
 	}
 	return res.String()
 }

@@ -1,8 +1,8 @@
 package expr
 
 import (
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
-	"github.com/SennovE/qrafter/internal/utils"
 )
 
 type AliasedExpression struct {
@@ -16,8 +16,8 @@ func (a AliasedExpression) Tables() core.TablesSet {
 	return a.expr.Tables()
 }
 
-func (a AliasedExpression) Render() string {
-	return a.expr.Render() + " AS " + utils.QuoteIdent(a.alias)
+func (a AliasedExpression) Render(d dialect.DialectRenderer) string {
+	return a.expr.Render(d) + " AS " + d.QuoteIdent(a.alias)
 }
 
 func Alias(expr core.Selecter, alias string) AliasedExpression {

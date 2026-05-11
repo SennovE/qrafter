@@ -1,8 +1,8 @@
 package qrafter
 
 import (
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
-	"github.com/SennovE/qrafter/internal/utils"
 )
 
 type Column[T any] struct {
@@ -21,6 +21,6 @@ func (c Column[T]) Tables() core.TablesSet {
 	return core.TablesSet{c.Table: struct{}{}}
 }
 
-func (c Column[T]) Render() string {
-	return utils.QuoteIdent(c.Table.SQLName()) + "." + utils.QuoteIdent(c.Name)
+func (c Column[T]) Render(d dialect.DialectRenderer) string {
+	return d.QuoteIdent(c.Table.SQLName()) + "." + d.QuoteIdent(c.Name)
 }
