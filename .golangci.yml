@@ -1,0 +1,68 @@
+version: '2'
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 8
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    - revive
+    - gocritic
+    - misspell
+    - goconst
+    - prealloc
+
+    - gosec
+    - bodyclose
+    - sqlclosecheck
+
+    - gocyclo
+    - gocognit
+
+linters-settings:
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - commentFormatting
+
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  misspell:
+    locale: US
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    - path: _test\.go
+      text: "Using the variable on range scope .* in function literal"
+
+    - path: _test\.go
+      linters:
+        - funlen
+        - gocognit
+        - gocyclo
