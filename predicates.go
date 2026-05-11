@@ -6,11 +6,11 @@ import (
 )
 
 func And(ps ...core.Predicater) pred.LogicalPredicate {
-	return pred.Logical("AND", ps...)
+	return pred.Logical(pred.OpAnd, ps...)
 }
 
 func Or(ps ...core.Predicater) pred.LogicalPredicate {
-	return pred.Logical("OR", ps...)
+	return pred.Logical(pred.OpOr, ps...)
 }
 
 func Lt(a, b core.Selecter) pred.BinaryPredicate {

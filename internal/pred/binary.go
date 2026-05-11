@@ -18,7 +18,16 @@ var _ = (core.Predicater)(BinaryPredicate{})
 func (e BinaryPredicate) Predicate() {}
 
 func (e BinaryPredicate) Render(d dialect.DialectRenderer) string {
-	return fmt.Sprintf("%s %s %s", e.a.Render(d), e.op, e.b.Render(d))
+	return fmt.Sprintf(
+		"%s %s %s",
+		core.RenderChild(e.a, e.Precedence(), false, d),
+		e.op,
+		core.RenderChild(e.b, e.Precedence(), false, d),
+	)
+}
+
+func (e BinaryPredicate) Precedence() int {
+	return core.PrecedenceComparison
 }
 
 func (e BinaryPredicate) Tables() core.TablesSet {

@@ -14,6 +14,11 @@ type LogicalPredicate struct {
 	op string
 }
 
+const (
+	OpAnd = "AND"
+	OpOr  = "OR"
+)
+
 var _ = (core.Predicater)(LogicalPredicate{})
 
 func (e LogicalPredicate) Predicate() {}
@@ -24,9 +29,20 @@ func (e LogicalPredicate) Render(d dialect.DialectRenderer) string {
 		if i > 0 {
 			fmt.Fprintf(&res, " %s ", e.op)
 		}
-		res.WriteString(p.Render(d))
+		res.WriteString(core.RenderChild(p, e.Precedence(), false, d))
 	}
 	return res.String()
+}
+
+func (e LogicalPredicate) Precedence() int {
+	switch e.op {
+	case OpOr:
+		return core.PrecedenceOr
+	case OpAnd:
+		return core.PrecedenceAnd
+	default:
+		return core.PrecedenceComparison
+	}
 }
 
 func (e LogicalPredicate) Tables() core.TablesSet {

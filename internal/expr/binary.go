@@ -16,7 +16,32 @@ type BinaryExpression struct {
 var _ = (core.Selecter)(BinaryExpression{})
 
 func (e BinaryExpression) Render(d dialect.DialectRenderer) string {
-	return fmt.Sprintf("%s %s %s", e.a.Render(d), e.op, e.b.Render(d))
+	return fmt.Sprintf(
+		"%s %s %s",
+		core.RenderChild(e.a, e.Precedence(), false, d),
+		e.op,
+		core.RenderChild(e.b, e.Precedence(), e.parenthesizeRightPeer(), d),
+	)
+}
+
+func (e BinaryExpression) Precedence() int {
+	switch e.op {
+	case "*", "/", "%":
+		return core.PrecedenceMultiplicative
+	case "+", "-":
+		return core.PrecedenceAdditive
+	default:
+		return core.PrecedenceComparison
+	}
+}
+
+func (e BinaryExpression) parenthesizeRightPeer() bool {
+	switch e.op {
+	case "-", "/", "%":
+		return true
+	default:
+		return false
+	}
 }
 
 func (e BinaryExpression) Tables() core.TablesSet {

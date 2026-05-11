@@ -5,8 +5,8 @@ import (
 	"github.com/SennovE/qrafter/internal/expr"
 )
 
-func As(expression core.Selecter, alias string) expr.AliasedExpression {
-	return expr.Alias(expression, alias)
+func As(e core.Selecter, alias string) expr.AliasedExpression {
+	return expr.Alias(e, alias)
 }
 
 func Const(v any) expr.ConstExpression {
@@ -15,4 +15,16 @@ func Const(v any) expr.ConstExpression {
 
 func Sum(a, b core.Selecter) expr.BinaryExpression {
 	return expr.Binary("+", a, b)
+}
+
+func Sub(a, b core.Selecter) expr.BinaryExpression {
+	return expr.Binary("-", a, b)
+}
+
+func Mul(a, b core.Selecter) expr.BinaryExpression {
+	return expr.Binary("*", a, b)
+}
+
+func Div(a, b core.Selecter) expr.BinaryExpression {
+	return expr.Binary("/", a, b)
 }

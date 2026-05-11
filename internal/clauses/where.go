@@ -5,6 +5,7 @@ import (
 
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
+	"github.com/SennovE/qrafter/internal/pred"
 )
 
 type WhereClause struct {
@@ -16,11 +17,10 @@ var _ = (Clauser)(WhereClause{})
 func (c WhereClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
 	if len(c.Predicates) > 0 {
 		w.WriteString(" WHERE ")
-		for i, pred := range c.Predicates {
-			if i > 0 {
-				w.WriteString(" AND ")
-			}
-			w.WriteString(pred.Render(d))
+		if len(c.Predicates) == 1 {
+			w.WriteString(c.Predicates[0].Render(d))
+			return
 		}
+		w.WriteString(pred.Logical(pred.OpAnd, c.Predicates...).Render(d))
 	}
 }
