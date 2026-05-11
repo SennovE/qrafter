@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	q "github.com/SennovE/qrafter"
+	"github.com/SennovE/qrafter/dialect"
 )
 
 type User struct {
@@ -45,5 +46,5 @@ func main() {
 			q.Eq(q.Const("Test"), user.UserName),
 		),
 	)
-	fmt.Println(q.Render())
+	fmt.Println(q.Render(dialect.PostgreSQL{}))
 }

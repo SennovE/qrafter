@@ -3,6 +3,7 @@ package pred
 import (
 	"fmt"
 
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -16,8 +17,8 @@ var _ = (core.Predicater)(BinaryPredicate{})
 
 func (e BinaryPredicate) Predicate() {}
 
-func (e BinaryPredicate) Render() string {
-	return fmt.Sprintf("%s %s %s", e.a.Render(), e.op, e.b.Render())
+func (e BinaryPredicate) Render(d dialect.DialectRenderer) string {
+	return fmt.Sprintf("%s %s %s", e.a.Render(d), e.op, e.b.Render(d))
 }
 
 func (e BinaryPredicate) Tables() core.TablesSet {

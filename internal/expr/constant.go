@@ -1,14 +1,12 @@
 package expr
 
 import (
-	"fmt"
-	"strings"
-
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 )
 
 type ConstExpression struct {
-	v string
+	v any
 }
 
 var _ = (core.Selecter)(ConstExpression{})
@@ -17,31 +15,10 @@ func (c ConstExpression) Tables() core.TablesSet {
 	return nil
 }
 
-func (c ConstExpression) Render() string {
-	return c.v
+func (c ConstExpression) Render(d dialect.DialectRenderer) string {
+	return d.Literal(c.v)
 }
 
 func Const(value any) ConstExpression {
-	var c ConstExpression
-
-	switch v := value.(type) {
-	case nil:
-		c.v = "NULL"
-	case bool:
-		if v {
-			c.v = "TRUE"
-		} else {
-			c.v = "FALSE"
-		}
-	case string:
-		c.v = escapeSQLstring(v)
-	default:
-		c.v = fmt.Sprint(v)
-	}
-
-	return c
-}
-
-func escapeSQLstring(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	return ConstExpression{v: value}
 }

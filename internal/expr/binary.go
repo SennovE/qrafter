@@ -3,6 +3,7 @@ package expr
 import (
 	"fmt"
 
+	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -14,8 +15,8 @@ type BinaryExpression struct {
 
 var _ = (core.Selecter)(BinaryExpression{})
 
-func (e BinaryExpression) Render() string {
-	return fmt.Sprintf("%s %s %s", e.a.Render(), e.op, e.b.Render())
+func (e BinaryExpression) Render(d dialect.DialectRenderer) string {
+	return fmt.Sprintf("%s %s %s", e.a.Render(d), e.op, e.b.Render(d))
 }
 
 func (e BinaryExpression) Tables() core.TablesSet {
