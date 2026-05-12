@@ -9,6 +9,7 @@ import (
 )
 
 type SelectQuery struct {
+	withCl        withClause
 	selectCl      clauses.SelectClause
 	fromCl        clauses.FromClause
 	whereCl       clauses.WhereClause
@@ -90,6 +91,7 @@ func (q SelectQuery) Render(d dialect.DialectRenderer) string {
 	var w strings.Builder
 
 	clauses := []clauses.Clauser{
+		q.withCl,
 		q.selectCl,
 		q.fromCl,
 		q.whereCl,
@@ -104,4 +106,11 @@ func (q SelectQuery) Render(d dialect.DialectRenderer) string {
 	}
 
 	return w.String()
+}
+
+func (q SelectQuery) CTE(name string) CommonTableExpression {
+	return CommonTableExpression{
+		name:  name,
+		query: q,
+	}
 }

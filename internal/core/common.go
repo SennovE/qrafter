@@ -18,6 +18,10 @@ type Renderer interface {
 	Render(w *strings.Builder, d dialect.DialectRenderer)
 }
 
+type QueryRenderer interface {
+	Render(d dialect.DialectRenderer) string
+}
+
 type Precedencer interface {
 	Precedence() int
 }
