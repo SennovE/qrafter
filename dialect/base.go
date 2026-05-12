@@ -37,11 +37,11 @@ func (BaseDialect) Literal(value any) string {
 func (BaseDialect) LimitOffset(limit, offset int) string {
 	switch {
 	case limit > 0 && offset > 0:
-		return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
+		return fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 	case limit > 0:
-		return fmt.Sprintf("LIMIT %d", limit)
+		return fmt.Sprintf(" LIMIT %d", limit)
 	case offset > 0:
-		return fmt.Sprintf("OFFSET %d", offset)
+		return fmt.Sprintf(" OFFSET %d", offset)
 	default:
 		return ""
 	}

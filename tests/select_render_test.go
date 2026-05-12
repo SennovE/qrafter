@@ -91,3 +91,36 @@ func TestSelectRender_LeftJoin(t *testing.T) {
 		query.Render(dialect.PostgreSQL{}),
 	)
 }
+
+func TestSelectRender_GroupBy(t *testing.T) {
+	u := User{}
+	require.NoError(t, qrafter.Bind(&u))
+
+	query := qrafter.Select(u.UserName, u.Age.Add(1)).
+		GroupBy(u.UserName).
+		Limit(10)
+
+	assert.Equal(
+		t,
+		`SELECT "table"."user_name", "table"."userAge" + 1 FROM "table" GROUP BY "table"."user_name" LIMIT 10`,
+		query.Render(dialect.PostgreSQL{}),
+	)
+}
+
+func TestSelectRender_GroupByJoinedTable(t *testing.T) {
+	u := User{}
+	require.NoError(t, qrafter.Bind(&u))
+
+	manager, err := qrafter.TableAlias(u, "manager")
+	require.NoError(t, err)
+
+	query := qrafter.Select(manager.UserName).
+		Join(manager, u.Age.Eq(manager.Age)).
+		GroupBy(manager.UserName)
+
+	assert.Equal(
+		t,
+		`SELECT "manager"."user_name" FROM "table" JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" GROUP BY "manager"."user_name"`,
+		query.Render(dialect.PostgreSQL{}),
+	)
+}
