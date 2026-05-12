@@ -3,168 +3,165 @@ package tests
 import (
 	"testing"
 
-	"github.com/SennovE/qrafter"
+	q "github.com/SennovE/qrafter"
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelectRender_ParenthesizesLowerPrecedencePredicate(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
+func TestSelectRender_Basic(t *testing.T) {
+	UserTable := User{}
+	require.NoError(t, q.Bind(&UserTable))
 
-	query := qrafter.Select(u.UserName).Where(
-		qrafter.And(
-			u.UserName.Eq("ABC"),
-			qrafter.Or(
-				u.Age.Ge("1"),
-				qrafter.Const("Test").Eq(u.UserName),
+	tests := []struct {
+		name    string
+		query   q.SelectQuery
+		wantSQL string
+	}{
+		{
+			"Lower priority is indicated in brackets for logical expressions",
+			q.Select(UserTable.UserName).
+				Where(
+					q.And(
+						UserTable.UserName.Eq("ABC"),
+						q.Or(
+							UserTable.Age.Ge("1"),
+							q.Const("Test").Eq(UserTable.UserName),
+						),
+					),
+				),
+			`SELECT "table"."user_name" FROM "table" ` +
+				`WHERE "table"."user_name" = 'ABC' AND ("table"."userAge" >= '1' OR 'Test' = "table"."user_name")`,
+		},
+		{
+			"Lower priority is indicated in brackets for math expressions",
+			q.Select(UserTable.Age.Add(1).Mul(2)),
+			`SELECT ("table"."userAge" + 1) * 2 FROM "table"`,
+		},
+		{
+			"The right peer for a non-associative expression is indicated in brackets",
+			q.Select(q.Const(10).Sub(q.Const(7).Sub(3))),
+			`SELECT 10 - (7 - 3)`,
+		},
+		{
+			"Group By",
+			q.Select(UserTable.UserName, UserTable.Age.Add(1)).
+				GroupBy(UserTable.UserName).
+				Limit(10),
+			`SELECT "table"."user_name", "table"."userAge" + 1 FROM "table" ` +
+				`GROUP BY "table"."user_name" ` +
+				`LIMIT 10`,
+		},
+		{
+			"Functions",
+			q.Select(
+				q.Func("LOWER", UserTable.UserName).As("lower_name"),
+				q.Func("COALESCE", UserTable.Age, "0"),
+			).Where(
+				q.Func("LOWER", UserTable.UserName).Eq("bob"),
 			),
-		),
-	)
+			`SELECT ` +
+				`LOWER("table"."user_name") AS "lower_name", ` +
+				`COALESCE("table"."userAge", '0') FROM "table" ` +
+				`WHERE LOWER("table"."user_name") = 'bob'`,
+		},
+		{
+			"Aggregations and Having",
+			q.Select(
+				UserTable.UserName,
+				q.Count().As("users_count"),
+				q.Count(q.Distinct(UserTable.Age)).As("distinct_ages"),
+				q.Max(UserTable.Age).As("max_age"),
+			).GroupBy(
+				UserTable.UserName,
+			).Having(
+				q.Count().Gt(1),
+				q.Max(UserTable.Age).Ge("18"),
+			).Limit(10),
+			`SELECT ` +
+				`"table"."user_name", ` +
+				`COUNT(*) AS "users_count", ` +
+				`COUNT(DISTINCT "table"."userAge") AS "distinct_ages", ` +
+				`MAX("table"."userAge") AS "max_age" FROM "table" ` +
+				`GROUP BY "table"."user_name" ` +
+				`HAVING COUNT(*) > 1 AND MAX("table"."userAge") >= '18' ` +
+				`LIMIT 10`,
+		},
+		{
+			"Order By",
+			q.Select(UserTable.UserName).
+				OrderBy(
+					UserTable.UserName.Asc(),
+					UserTable.Age.Desc().NullsLast(),
+				).
+				Limit(10).
+				Offset(10),
+			`SELECT "table"."user_name" FROM "table" ` +
+				`ORDER BY "table"."user_name" ASC, "table"."userAge" DESC NULLS LAST ` +
+				`LIMIT 10 OFFSET 10`,
+		},
+		{
+			"Order By with Aggregations",
+			q.Select(UserTable.UserName, q.Count().As("users_count")).
+				GroupBy(UserTable.UserName).
+				Having(q.Count().Gt(1)).
+				OrderBy(q.Count().Desc()),
+			`SELECT "table"."user_name", COUNT(*) AS "users_count" FROM "table" ` +
+				`GROUP BY "table"."user_name" ` +
+				`HAVING COUNT(*) > 1 ` +
+				`ORDER BY COUNT(*) DESC`,
+		},
+	}
 
-	assert.Equal(
-		t,
-		`SELECT "table"."user_name" FROM "table" WHERE "table"."user_name" = 'ABC' AND ("table"."userAge" >= '1' OR 'Test' = "table"."user_name")`,
-		query.Render(dialect.PostgreSQL{}),
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+		})
+	}
 }
 
-func TestSelectRender_ParenthesizesLowerPrecedenceExpression(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
+func TestSelectRender_WithJoin(t *testing.T) {
+	UserTable := User{}
+	require.NoError(t, q.Bind(&UserTable))
 
-	query := qrafter.Select(
-		u.Age.Add(1).Mul(2),
-	)
-
-	assert.Equal(
-		t,
-		`SELECT ("table"."userAge" + 1) * 2 FROM "table"`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_ParenthesizesRightPeerForNonAssociativeExpression(t *testing.T) {
-	query := qrafter.Select(
-		qrafter.Const(10).Sub(qrafter.Const(7).Sub(3)),
-	)
-
-	assert.Equal(t, `SELECT 10 - (7 - 3)`, query.Render(dialect.PostgreSQL{}))
-}
-
-func TestSelectRender_Join(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	manager, err := qrafter.TableAlias(u, "manager")
+	ManagerTable, err := q.TableAlias(UserTable, "manager")
 	require.NoError(t, err)
 
-	query := qrafter.Select(u.UserName, manager.UserName).
-		Join(manager, u.Age.Eq(manager.Age)).
-		Where(manager.UserName.Eq("Bob"))
+	tests := []struct {
+		name    string
+		query   q.SelectQuery
+		wantSQL string
+	}{
+		{
+			"Basic Join",
+			q.Select(UserTable.UserName, ManagerTable.UserName).
+				Join(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)).
+				Where(ManagerTable.UserName.Eq("Bob")),
+			`SELECT "table"."user_name", "manager"."user_name" FROM "table" ` +
+				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
+				`WHERE "manager"."user_name" = 'Bob'`,
+		},
+		{
+			"Left Join",
+			q.Select(UserTable.UserName).
+				LeftJoin(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)),
+			`SELECT "table"."user_name" FROM "table" ` +
+				`LEFT JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"`,
+		},
+		{
+			"Group By with Join",
+			q.Select(ManagerTable.UserName).
+				Join(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)).
+				GroupBy(ManagerTable.UserName),
+			`SELECT "manager"."user_name" FROM "table" ` +
+				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
+				`GROUP BY "manager"."user_name"`,
+		},
+	}
 
-	assert.Equal(
-		t,
-		`SELECT "table"."user_name", "manager"."user_name" FROM "table" JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" WHERE "manager"."user_name" = 'Bob'`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_LeftJoin(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	manager, err := qrafter.TableAlias(u, "manager")
-	require.NoError(t, err)
-
-	query := qrafter.
-		Select(u.UserName).
-		LeftJoin(
-			manager,
-			u.Age.Eq(manager.Age),
-		)
-
-	assert.Equal(
-		t,
-		`SELECT "table"."user_name" FROM "table" LEFT JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_GroupBy(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	query := qrafter.Select(u.UserName, u.Age.Add(1)).
-		GroupBy(u.UserName).
-		Limit(10)
-
-	assert.Equal(
-		t,
-		`SELECT "table"."user_name", "table"."userAge" + 1 FROM "table" GROUP BY "table"."user_name" LIMIT 10`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_GroupByJoinedTable(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	manager, err := qrafter.TableAlias(u, "manager")
-	require.NoError(t, err)
-
-	query := qrafter.Select(manager.UserName).
-		Join(manager, u.Age.Eq(manager.Age)).
-		GroupBy(manager.UserName)
-
-	assert.Equal(
-		t,
-		`SELECT "manager"."user_name" FROM "table" JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" GROUP BY "manager"."user_name"`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_Functions(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	query := qrafter.Select(
-		qrafter.Func("LOWER", u.UserName).As("lower_name"),
-		qrafter.Func("COALESCE", u.Age, "0"),
-	).Where(
-		qrafter.Func("LOWER", u.UserName).Eq("bob"),
-	)
-
-	assert.Equal(
-		t,
-		`SELECT LOWER("table"."user_name") AS "lower_name", COALESCE("table"."userAge", '0') FROM "table" WHERE LOWER("table"."user_name") = 'bob'`,
-		query.Render(dialect.PostgreSQL{}),
-	)
-}
-
-func TestSelectRender_AggregatesAndHaving(t *testing.T) {
-	u := User{}
-	require.NoError(t, qrafter.Bind(&u))
-
-	var usersCount qrafter.Aggregate = qrafter.Count()
-
-	query := qrafter.Select(
-		u.UserName,
-		usersCount.As("users_count"),
-		qrafter.Count(qrafter.Distinct(u.Age)).As("distinct_ages"),
-		qrafter.Max(u.Age).As("max_age"),
-	).
-		GroupBy(u.UserName).
-		Having(
-			usersCount.Gt(1),
-			qrafter.Max(u.Age).Ge("18"),
-		).
-		Limit(10)
-
-	assert.Equal(
-		t,
-		`SELECT "table"."user_name", COUNT(*) AS "users_count", COUNT(DISTINCT "table"."userAge") AS "distinct_ages", MAX("table"."userAge") AS "max_age" FROM "table" GROUP BY "table"."user_name" HAVING COUNT(*) > 1 AND MAX("table"."userAge") >= '18' LIMIT 10`,
-		query.Render(dialect.PostgreSQL{}),
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+		})
+	}
 }

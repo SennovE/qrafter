@@ -75,6 +75,14 @@ func (e Expression) Div(v any) Expression {
 	return newExpression(expr.Binary("/", e.selecter, asSelecter(v)))
 }
 
+func (e Expression) Asc() Order {
+	return Asc(e)
+}
+
+func (e Expression) Desc() Order {
+	return Desc(e)
+}
+
 func Const(v any) Expression {
 	return newExpression(expr.Const(v))
 }
