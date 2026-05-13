@@ -62,7 +62,7 @@ func (q CompoundQuery) RecursiveCTE(name string) CommonTableExpression {
 
 func (q CompoundQuery) Render(d dialect.DialectRenderer) string {
 	var w strings.Builder
-	withCl := withClauseFor(clauses.WithClause{}, q)
+	withCl := clauses.WithClause{}.WithClauseFor(q)
 
 	withCl.Render(&w, d)
 	q.RenderQueryExpression(&w, d)

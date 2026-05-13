@@ -166,3 +166,75 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		)
 	})
 }
+
+func TestSelectRender_WithMultipleCTEs(t *testing.T) {
+	cte1 := q.Select(q.Const(1)).CTE("cte1").WithColumns("c1")
+	cte2 := q.Select(cte1.Column("c1")).CTE("cte2").WithColumns("c1")
+	query := q.Select(cte1.Column("c1"), cte2.Column("c1")).CrossJoin(cte2)
+
+	assert.Equal(
+		t,
+		`WITH "cte1" ("c1") AS (SELECT 1), `+
+			`"cte2" ("c1") AS (SELECT "cte1"."c1" FROM "cte1") `+
+			`SELECT "cte1"."c1", "cte2"."c1" FROM "cte1" CROSS JOIN "cte2"`,
+		query.Render(dialect.PostgreSQL{}),
+	)
+}
+
+type Node struct {
+	ID q.Column[int]
+	ParentID q.Column[int]
+	Value q.Column[int]
+	Left  q.Column[int]
+	Right q.Column[int]
+}
+
+func (Node) TableConfig() q.TableConfig {
+	return q.TableConfig{
+		Name: "node",
+	}
+}
+
+type NodeStatus struct {
+	NodeID q.Column[int]
+	Status q.Column[string]
+}
+
+func (NodeStatus) TableConfig() q.TableConfig {
+	return q.TableConfig{
+		Name: "node_status",
+	}
+}
+
+func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
+	NodeTable := Node{}
+	NodeStatusTable := NodeStatus{}
+	require.NoError(t, q.Bind(&NodeTable))
+	require.NoError(t, q.Bind(&NodeStatusTable))
+
+	level := q.Const(1).As("level")
+	base := q.
+		Select(NodeTable.ID, NodeTable.ParentID, level).
+		Join(NodeStatusTable, NodeTable.ID.Eq(NodeStatusTable.NodeID)).
+		Where(NodeStatusTable.Status.Eq("active")).
+		CTE("nodes").
+		WithColumns("ID", "ParentID", "level")
+
+	rlevel := base.Column("level").Add(1).As("level")
+
+	recursive := q.
+        Select(NodeTable.ID, NodeTable.ParentID, rlevel).
+        Join(base, NodeTable.ParentID.Eq(base.Column("ID")))
+
+    cte := base.UnionAll(recursive.Limit(1))
+
+	query := q.
+		Select(cte.Column("ID"), cte.Column("ParentID"), cte.Column("level")).
+		OrderBy(cte.Column("level"))
+
+	assert.Equal(
+		t,
+		"",
+		query.Render(dialect.PostgreSQL{}),
+	)
+}

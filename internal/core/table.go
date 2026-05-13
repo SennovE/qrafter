@@ -24,7 +24,7 @@ type TablesSet = map[TableRef]struct{}
 type CTERef struct {
 	Name      string
 	Columns   []string
-	Query     QueryRenderer
+	Query     QueryExpression
 	Recursive bool
 }
 
@@ -65,7 +65,7 @@ func (cte *CTERef) Render(w *strings.Builder, d dialect.DialectRenderer) {
 	}
 
 	w.WriteString(" AS (")
-	w.WriteString(cte.Query.Render(d))
+	cte.Query.RenderQueryExpression(w, d)
 	w.WriteString(")")
 }
 

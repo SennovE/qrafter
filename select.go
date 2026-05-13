@@ -110,7 +110,7 @@ func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 
 func (q SelectQuery) Render(d dialect.DialectRenderer) string {
 	var w strings.Builder
-	withCl := withClauseFor(q.withCl, q)
+	withCl := q.withCl.WithClauseFor(q)
 
 	withCl.Render(&w, d)
 	q.RenderQueryExpression(&w, d)
@@ -149,41 +149,14 @@ func (q SelectQuery) CTEs() []*core.CTERef {
 	for _, table := range core.GetSortedTables(q.fromCl.Tables) {
 		if table.CTE != nil {
 			ctes = append(ctes, table.CTE)
+			ctes = append(ctes, table.CTE.Query.CTEs()...)
 		}
 	}
 	for _, join := range q.fromCl.Joins {
 		if join.Table.CTE != nil {
 			ctes = append(ctes, join.Table.CTE)
+			ctes = append(ctes, join.Table.CTE.Query.CTEs()...)
 		}
 	}
 	return ctes
-}
-
-func withClauseFor(withCl clauses.WithClause, q core.QueryExpression) clauses.WithClause {
-	seen := make(map[string]struct{}, len(withCl.CTEs))
-	for _, cte := range withCl.CTEs {
-		if cte == nil {
-			continue
-		}
-		seen[cte.Name] = struct{}{}
-		if cte.Recursive {
-			withCl.Recursive = true
-		}
-	}
-
-	for _, cte := range q.CTEs() {
-		if cte == nil {
-			continue
-		}
-		if cte.Recursive {
-			withCl.Recursive = true
-		}
-		if _, ok := seen[cte.Name]; ok {
-			continue
-		}
-		withCl.CTEs = append(withCl.CTEs, cte)
-		seen[cte.Name] = struct{}{}
-	}
-
-	return withCl
 }
