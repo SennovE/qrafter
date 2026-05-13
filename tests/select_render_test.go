@@ -236,3 +236,59 @@ func TestSelectRender_WithUnion(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectRender_WithWindowFunctions(t *testing.T) {
+	UserTable := User{}
+	require.NoError(t, q.Bind(&UserTable))
+
+	tests := []struct {
+		name    string
+		query   q.SelectQuery
+		wantSQL string
+	}{
+		{
+			"Row number with partition and order",
+			q.Select(
+				UserTable.UserName,
+				q.RowNumber().
+					Over(q.Window().
+						PartitionBy(UserTable.Age).
+						OrderBy(UserTable.UserName.Asc()),
+					).
+					As("rn"),
+			),
+			`SELECT "table"."user_name", ` +
+				`ROW_NUMBER() OVER (PARTITION BY "table"."userAge" ORDER BY "table"."user_name" ASC) AS "rn" ` +
+				`FROM "table"`,
+		},
+		{
+			"Aggregate window",
+			q.Select(
+				UserTable.UserName,
+				q.Count().Over(q.PartitionBy(UserTable.Age)).As("age_count"),
+			),
+			`SELECT "table"."user_name", COUNT(*) OVER (PARTITION BY "table"."userAge") AS "age_count" ` +
+				`FROM "table"`,
+		},
+		{
+			"Window order contributes source table",
+			q.Select(
+				q.RowNumber().
+					Over(q.Window().OrderBy(UserTable.Age.Desc())).
+					As("rn"),
+			),
+			`SELECT ROW_NUMBER() OVER (ORDER BY "table"."userAge" DESC) AS "rn" FROM "table"`,
+		},
+		{
+			"Empty over clause",
+			q.Select(q.Count().Over().As("total")),
+			`SELECT COUNT(*) OVER () AS "total"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+		})
+	}
+}
