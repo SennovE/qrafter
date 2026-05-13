@@ -32,6 +32,16 @@ func (Users) TableConfig() q.TableConfig {
 	}
 }
 
+type Numbers struct {
+	N q.Column[int] `db:"n"`
+}
+
+func (Numbers) TableConfig() q.TableConfig {
+	return q.TableConfig{
+		Name: "numbers",
+	}
+}
+
 func TestSelectRender_WithCTE(t *testing.T) {
 	OrdersTable := Orders{}
 	require.NoError(t, q.Bind(&OrdersTable))
@@ -65,9 +75,10 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
 				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = 'paid'`+
+				`WHERE "orders"."status" = 'paid' `+
+				`GROUP BY "orders"."user_id"`+
 				`) `+
-				`SELECT "users"."name" FROM "users" `+
+				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
 				`WHERE "total_amounts"."total" > 100`,
 			query.Render(dialect.PostgreSQL{}),
@@ -84,11 +95,73 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
 				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = 'paid'`+
+				`WHERE "orders"."status" = 'paid' `+
+				`GROUP BY "orders"."user_id"`+
 				`) `+
-				`SELECT "users"."name" FROM "users" `+
+				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
 				`WHERE "total_amounts"."total" > 100`,
+			query.Render(dialect.PostgreSQL{}),
+		)
+	})
+}
+
+func TestSelectRender_WithRecursiveCTE(t *testing.T) {
+	t.Run("Recursive CTE method", func(t *testing.T) {
+		cte := q.
+			Select(q.Const(1)).
+			CTE("numbers").
+			Recursive().
+			WithColumns("n")
+
+		query := q.Select(cte.Column("n"))
+
+		assert.Equal(
+			t,
+			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
+				`SELECT "numbers"."n" FROM "numbers"`,
+			query.Render(dialect.PostgreSQL{}),
+		)
+	})
+
+	t.Run("Recursive CTE shortcut", func(t *testing.T) {
+		cte := q.
+			Select(q.Const(1)).
+			RecursiveCTE("numbers").
+			WithColumns("n")
+
+		query := q.Select(cte.Column("n"))
+
+		assert.Equal(
+			t,
+			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
+				`SELECT "numbers"."n" FROM "numbers"`,
+			query.Render(dialect.PostgreSQL{}),
+		)
+	})
+
+	t.Run("Recursive CTE with union all", func(t *testing.T) {
+		NumbersTable := Numbers{}
+		require.NoError(t, q.Bind(&NumbersTable))
+
+		cte := q.
+			Select(q.Const(1)).
+			UnionAll(
+				q.Select(NumbersTable.N.Add(1)).
+					Where(NumbersTable.N.Lt(3)),
+			).
+			RecursiveCTE("numbers").
+			WithColumns("n")
+
+		query := q.Select(cte.Column("n"))
+
+		assert.Equal(
+			t,
+			`WITH RECURSIVE "numbers" ("n") AS (`+
+				`SELECT 1 UNION ALL `+
+				`SELECT "numbers"."n" + 1 FROM "numbers" WHERE "numbers"."n" < 3`+
+				`) `+
+				`SELECT "numbers"."n" FROM "numbers"`,
 			query.Render(dialect.PostgreSQL{}),
 		)
 	})

@@ -22,6 +22,13 @@ type QueryRenderer interface {
 	Render(d dialect.DialectRenderer) string
 }
 
+type QueryExpression interface {
+	QueryRenderer
+	RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer)
+	RenderSetOperand(w *strings.Builder, d dialect.DialectRenderer)
+	CTEs() []*CTERef
+}
+
 type Precedencer interface {
 	Precedence() int
 }

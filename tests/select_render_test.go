@@ -165,3 +165,74 @@ func TestSelectRender_WithJoin(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectRender_WithUnion(t *testing.T) {
+	UserTable := User{}
+	require.NoError(t, q.Bind(&UserTable))
+
+	tests := []struct {
+		name  string
+		query interface {
+			Render(dialect.DialectRenderer) string
+		}
+		wantSQL string
+	}{
+		{
+			"Union",
+			q.Select(q.Const(1)).
+				Union(q.Select(q.Const(2))),
+			`SELECT 1 UNION SELECT 2`,
+		},
+		{
+			"Union All",
+			q.Select(UserTable.UserName).
+				Where(UserTable.Age.Lt("18")).
+				UnionAll(
+					q.Select(UserTable.UserName).
+						Where(UserTable.Age.Ge("65")),
+				),
+			`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" < '18' ` +
+				`UNION ALL ` +
+				`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" >= '65'`,
+		},
+		{
+			"Union with final limit",
+			q.Select(q.Const(1)).
+				UnionAll(q.Select(q.Const(2))).
+				Limit(1),
+			`SELECT 1 UNION ALL SELECT 2 LIMIT 1`,
+		},
+		{
+			"Union with local limit in right arm",
+			q.Select(q.Const(1)).
+				UnionAll(
+					q.Select(q.Const(2)).
+						Limit(1),
+				),
+			`SELECT 1 UNION ALL (SELECT 2 LIMIT 1)`,
+		},
+		{
+			"Union with local limit in left arm and final limit",
+			q.Select(q.Const(1)).
+				Limit(1).
+				UnionAll(q.Select(q.Const(2))).
+				Limit(10),
+			`(SELECT 1 LIMIT 1) UNION ALL SELECT 2 LIMIT 10`,
+		},
+		{
+			"Union with local limit in compound left arm",
+			q.Select(q.Const(1)).
+				Union(q.Select(q.Const(2))).
+				Limit(1).
+				UnionAll(q.Select(q.Const(3))).
+				Limit(10),
+			`(SELECT 1 UNION SELECT 2 LIMIT 1) UNION ALL SELECT 3 LIMIT 10`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+		})
+	}
+}

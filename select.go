@@ -9,7 +9,7 @@ import (
 )
 
 type SelectQuery struct {
-	withCl        withClause
+	withCl        clauses.WithClause
 	selectCl      clauses.SelectClause
 	fromCl        clauses.FromClause
 	whereCl       clauses.WhereClause
@@ -87,11 +87,39 @@ func (q SelectQuery) Offset(o int) SelectQuery {
 	return q
 }
 
+func (q SelectQuery) Union(other SelectQuery) CompoundQuery {
+	return newCompoundQuery(q, "UNION", other)
+}
+
+func (q SelectQuery) UnionAll(other SelectQuery) CompoundQuery {
+	return newCompoundQuery(q, "UNION ALL", other)
+}
+
+func (q SelectQuery) CTE(name string) CommonTableExpression {
+	return CommonTableExpression{
+		ref: &core.CTERef{
+			Name:  name,
+			Query: q,
+		},
+	}
+}
+
+func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
+	return q.CTE(name).Recursive()
+}
+
 func (q SelectQuery) Render(d dialect.DialectRenderer) string {
 	var w strings.Builder
+	withCl := withClauseFor(q.withCl, q)
 
+	withCl.Render(&w, d)
+	q.RenderQueryExpression(&w, d)
+
+	return w.String()
+}
+
+func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer) {
 	clauses := []clauses.Clauser{
-		q.withCl,
 		q.selectCl,
 		q.fromCl,
 		q.whereCl,
@@ -102,15 +130,60 @@ func (q SelectQuery) Render(d dialect.DialectRenderer) string {
 	}
 
 	for _, cl := range clauses {
-		cl.Render(&w, d)
+		cl.Render(w, d)
 	}
-
-	return w.String()
 }
 
-func (q SelectQuery) CTE(name string) CommonTableExpression {
-	return CommonTableExpression{
-		name:  name,
-		query: q,
+func (q SelectQuery) RenderSetOperand(w *strings.Builder, d dialect.DialectRenderer) {
+	if len(q.orderByCl.Items) > 0 || q.limitOffsetCl.Limit != 0 || q.limitOffsetCl.Offset != 0 {
+		w.WriteString("(")
+		q.RenderQueryExpression(w, d)
+		w.WriteString(")")
+		return
 	}
+	q.RenderQueryExpression(w, d)
+}
+
+func (q SelectQuery) CTEs() []*core.CTERef {
+	ctes := make([]*core.CTERef, 0)
+	for _, table := range core.GetSortedTables(q.fromCl.Tables) {
+		if table.CTE != nil {
+			ctes = append(ctes, table.CTE)
+		}
+	}
+	for _, join := range q.fromCl.Joins {
+		if join.Table.CTE != nil {
+			ctes = append(ctes, join.Table.CTE)
+		}
+	}
+	return ctes
+}
+
+func withClauseFor(withCl clauses.WithClause, q core.QueryExpression) clauses.WithClause {
+	seen := make(map[string]struct{}, len(withCl.CTEs))
+	for _, cte := range withCl.CTEs {
+		if cte == nil {
+			continue
+		}
+		seen[cte.Name] = struct{}{}
+		if cte.Recursive {
+			withCl.Recursive = true
+		}
+	}
+
+	for _, cte := range q.CTEs() {
+		if cte == nil {
+			continue
+		}
+		if cte.Recursive {
+			withCl.Recursive = true
+		}
+		if _, ok := seen[cte.Name]; ok {
+			continue
+		}
+		withCl.CTEs = append(withCl.CTEs, cte)
+		seen[cte.Name] = struct{}{}
+	}
+
+	return withCl
 }

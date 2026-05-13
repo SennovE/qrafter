@@ -14,11 +14,21 @@ type ColumnBinder interface {
 type TableRef struct {
 	Name  string
 	Alias string
+	CTE   *CTERef
 }
 
 var _ = (Renderer)(TableRef{})
 
 type TablesSet = map[TableRef]struct{}
+
+type CTERef struct {
+	Name      string
+	Columns   []string
+	Query     QueryRenderer
+	Recursive bool
+}
+
+var _ = (Renderer)((*CTERef)(nil))
 
 func (t TableRef) SQLName() string {
 	if t.Alias == "" {
@@ -35,6 +45,28 @@ func (t TableRef) Render(w *strings.Builder, d dialect.DialectRenderer) {
 		w.WriteString(" AS ")
 		w.WriteString(d.QuoteIdent(t.Alias))
 	}
+}
+
+func (cte *CTERef) Render(w *strings.Builder, d dialect.DialectRenderer) {
+	if cte == nil {
+		return
+	}
+
+	w.WriteString(d.QuoteIdent(cte.Name))
+	if len(cte.Columns) > 0 {
+		w.WriteString(" (")
+		for i, column := range cte.Columns {
+			if i > 0 {
+				w.WriteString(", ")
+			}
+			w.WriteString(d.QuoteIdent(column))
+		}
+		w.WriteString(")")
+	}
+
+	w.WriteString(" AS (")
+	w.WriteString(cte.Query.Render(d))
+	w.WriteString(")")
 }
 
 func GetSortedTables(tables TablesSet) []TableRef {
