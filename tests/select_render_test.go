@@ -17,6 +17,7 @@ func TestSelectRender_Basic(t *testing.T) {
 		name    string
 		query   q.SelectQuery
 		wantSQL string
+		args    []any
 	}{
 		{
 			"Lower priority is indicated in brackets for logical expressions",
@@ -26,44 +27,49 @@ func TestSelectRender_Basic(t *testing.T) {
 						UserTable.UserName.Eq("ABC"),
 						q.Or(
 							UserTable.Age.Ge("1"),
-							q.Literal("Test").Eq(UserTable.UserName),
+							q.Param("Test").Eq(UserTable.UserName),
 						),
 					),
 				),
 			`SELECT "table"."user_name" FROM "table" ` +
-				`WHERE "table"."user_name" = 'ABC' AND ("table"."userAge" >= '1' OR 'Test' = "table"."user_name")`,
+				`WHERE "table"."user_name" = $1 AND ("table"."userAge" >= $2 OR $3 = "table"."user_name")`,
+			[]any{"ABC", "1", "Test"},
 		},
 		{
 			"Lower priority is indicated in brackets for math expressions",
-			q.Select(UserTable.Age.Add(1).Mul(2)),
+			q.Select(UserTable.Age.Add(q.Literal(1)).Mul(q.Literal(2))),
 			`SELECT ("table"."userAge" + 1) * 2 FROM "table"`,
+			nil,
 		},
 		{
 			"The right peer for a non-associative expression is indicated in brackets",
-			q.Select(q.Literal(10).Sub(q.Literal(7).Sub(3))),
+			q.Select(q.Literal(10).Sub(q.Literal(7).Sub(q.Literal(3)))),
 			`SELECT 10 - (7 - 3)`,
+			nil,
 		},
 		{
 			"Group By",
 			q.Select(UserTable.UserName, UserTable.Age.Add(1)).
 				GroupBy(UserTable.UserName).
 				Limit(10),
-			`SELECT "table"."user_name", "table"."userAge" + 1 FROM "table" ` +
+			`SELECT "table"."user_name", "table"."userAge" + $1 FROM "table" ` +
 				`GROUP BY "table"."user_name" ` +
 				`LIMIT 10`,
+			[]any{1},
 		},
 		{
 			"Functions",
 			q.Select(
 				q.Func("LOWER", UserTable.UserName).As("lower_name"),
-				q.Func("COALESCE", UserTable.Age, "0"),
+				q.Func("COALESCE", UserTable.Age, q.Literal("0")),
 			).Where(
 				q.Func("LOWER", UserTable.UserName).Eq("bob"),
 			),
 			`SELECT ` +
 				`LOWER("table"."user_name") AS "lower_name", ` +
 				`COALESCE("table"."userAge", '0') FROM "table" ` +
-				`WHERE LOWER("table"."user_name") = 'bob'`,
+				`WHERE LOWER("table"."user_name") = $1`,
+			[]any{"bob"},
 		},
 		{
 			"Aggregations and Having",
@@ -84,8 +90,9 @@ func TestSelectRender_Basic(t *testing.T) {
 				`COUNT(DISTINCT "table"."userAge") AS "distinct_ages", ` +
 				`MAX("table"."userAge") AS "max_age" FROM "table" ` +
 				`GROUP BY "table"."user_name" ` +
-				`HAVING COUNT(*) > 1 AND MAX("table"."userAge") >= '18' ` +
+				`HAVING COUNT(*) > $1 AND MAX("table"."userAge") >= $2 ` +
 				`LIMIT 10`,
+			[]any{1, "18"},
 		},
 		{
 			"Order By",
@@ -99,17 +106,19 @@ func TestSelectRender_Basic(t *testing.T) {
 			`SELECT "table"."user_name" FROM "table" ` +
 				`ORDER BY "table"."user_name" ASC, "table"."userAge" DESC NULLS LAST ` +
 				`LIMIT 10 OFFSET 10`,
+			nil,
 		},
 		{
 			"Order By with Aggregations",
 			q.Select(UserTable.UserName, q.Count().As("users_count")).
 				GroupBy(UserTable.UserName).
-				Having(q.Count().Gt(1)).
+				Having(q.Count().Gt(q.Literal(1))).
 				OrderBy(q.Count().Desc()),
 			`SELECT "table"."user_name", COUNT(*) AS "users_count" FROM "table" ` +
 				`GROUP BY "table"."user_name" ` +
 				`HAVING COUNT(*) > 1 ` +
 				`ORDER BY COUNT(*) DESC`,
+			nil,
 		},
 	}
 
@@ -117,7 +126,7 @@ func TestSelectRender_Basic(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			str, args := tt.query.Render(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
-			assert.Empty(t, args)
+			assert.Equal(t, tt.args, args)
 		})
 	}
 }
@@ -133,6 +142,7 @@ func TestSelectRender_WithJoin(t *testing.T) {
 		name    string
 		query   q.SelectQuery
 		wantSQL string
+		args    []any
 	}{
 		{
 			"Basic Join",
@@ -141,7 +151,8 @@ func TestSelectRender_WithJoin(t *testing.T) {
 				Where(ManagerTable.UserName.Eq("Bob")),
 			`SELECT "table"."user_name", "manager"."user_name" FROM "table" ` +
 				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
-				`WHERE "manager"."user_name" = 'Bob'`,
+				`WHERE "manager"."user_name" = $1`,
+			[]any{"Bob"},
 		},
 		{
 			"Left Join",
@@ -149,6 +160,7 @@ func TestSelectRender_WithJoin(t *testing.T) {
 				LeftJoin(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)),
 			`SELECT "table"."user_name" FROM "table" ` +
 				`LEFT JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"`,
+			nil,
 		},
 		{
 			"Group By with Join",
@@ -158,6 +170,7 @@ func TestSelectRender_WithJoin(t *testing.T) {
 			`SELECT "manager"."user_name" FROM "table" ` +
 				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
 				`GROUP BY "manager"."user_name"`,
+			nil,
 		},
 	}
 
@@ -165,7 +178,7 @@ func TestSelectRender_WithJoin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			str, args := tt.query.Render(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
-			assert.Empty(t, args)
+			assert.Equal(t, tt.args, args)
 		})
 	}
 }
@@ -178,24 +191,27 @@ func TestSelectRender_WithUnion(t *testing.T) {
 		name    string
 		query   q.CompoundQuery
 		wantSQL string
+		args    []any
 	}{
 		{
 			"Union",
 			q.Select(q.Literal(1)).
 				Union(q.Select(q.Literal(2))),
 			`SELECT 1 UNION SELECT 2`,
+			nil,
 		},
 		{
 			"Union All",
 			q.Select(UserTable.UserName).
-				Where(UserTable.Age.Lt("18")).
+				Where(UserTable.Age.Lt(18)).
 				UnionAll(
 					q.Select(UserTable.UserName).
-						Where(UserTable.Age.Ge("65")),
+						Where(UserTable.Age.Ge(65)),
 				),
-			`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" < '18' ` +
+			`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" < $1 ` +
 				`UNION ALL ` +
-				`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" >= '65'`,
+				`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" >= $2`,
+			[]any{18, 65},
 		},
 		{
 			"Union with final limit",
@@ -203,6 +219,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 				UnionAll(q.Select(q.Literal(2))).
 				Limit(1),
 			`SELECT 1 UNION ALL SELECT 2 LIMIT 1`,
+			nil,
 		},
 		{
 			"Union with local limit in right arm",
@@ -212,6 +229,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 						Limit(1),
 				),
 			`SELECT 1 UNION ALL (SELECT 2 LIMIT 1)`,
+			nil,
 		},
 		{
 			"Union with local limit in left arm and final limit",
@@ -220,6 +238,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 				UnionAll(q.Select(q.Literal(2))).
 				Limit(10),
 			`(SELECT 1 LIMIT 1) UNION ALL SELECT 2 LIMIT 10`,
+			nil,
 		},
 		{
 			"Union with local limit in compound left arm",
@@ -229,6 +248,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 				UnionAll(q.Select(q.Literal(3))).
 				Limit(10),
 			`(SELECT 1 UNION SELECT 2 LIMIT 1) UNION ALL SELECT 3 LIMIT 10`,
+			nil,
 		},
 	}
 
@@ -236,7 +256,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			str, args := tt.query.Render(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
-			assert.Empty(t, args)
+			assert.Equal(t, tt.args, args)
 		})
 	}
 }

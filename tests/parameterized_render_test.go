@@ -101,8 +101,8 @@ func TestSelectRender_WithArgsKeepsConstantsInline(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`SELECT 1 FROM "table" WHERE "table"."user_name" = 'Alice'`,
+		`SELECT 1 FROM "table" WHERE "table"."user_name" = $1`,
 		sql,
 	)
-	assert.Empty(t, args)
+	assert.Equal(t, []any{"Alice"}, args)
 }

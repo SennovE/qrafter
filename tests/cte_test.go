@@ -76,15 +76,15 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
 				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = 'paid' `+
+				`WHERE "orders"."status" = $1 `+
 				`GROUP BY "orders"."user_id"`+
 				`) `+
 				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
-				`WHERE "total_amounts"."total" > 100`,
+				`WHERE "total_amounts"."total" > $2`,
 			str,
 		)
-		assert.Empty(t, args)
+		assert.Equal(t, []any{"paid", 100}, args)
 	})
 
 	t.Run("Query with CTE with obtaining columns by string name", func(t *testing.T) {
@@ -98,15 +98,15 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
 				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = 'paid' `+
+				`WHERE "orders"."status" = $1 `+
 				`GROUP BY "orders"."user_id"`+
 				`) `+
 				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
-				`WHERE "total_amounts"."total" > 100`,
+				`WHERE "total_amounts"."total" > $2`,
 			str,
 		)
-		assert.Empty(t, args)
+		assert.Equal(t, []any{"paid", 100}, args)
 	})
 }
 
@@ -155,8 +155,8 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		cte := q.
 			Select(q.Literal(1)).
 			UnionAll(
-				q.Select(NumbersTable.N.Add(1)).
-					Where(NumbersTable.N.Lt(3)),
+				q.Select(NumbersTable.N.Add(q.Literal(1))).
+					Where(NumbersTable.N.Lt(q.Literal(3))),
 			).
 			RecursiveCTE("numbers").
 			WithColumns("n")
@@ -226,12 +226,12 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 	base := q.
 		Select(NodeTable.ID, NodeTable.ParentID, level).
 		Join(NodeStatusTable, NodeTable.ID.Eq(NodeStatusTable.NodeID)).
-		Where(NodeStatusTable.Status.Eq("active")).
+		Where(NodeStatusTable.Status.Eq(q.Literal("active"))).
 		CTE("nodes").
 		Recursive().
 		WithColumns("id", "parent_id", "level")
 
-	rlevel := base.Column("level").Add(1).As("level")
+	rlevel := base.Column("level").Add(q.Literal(1)).As("level")
 
 	recursive := q.
 		Select(NodeTable.ID, NodeTable.ParentID, rlevel).

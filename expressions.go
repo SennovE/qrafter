@@ -25,7 +25,7 @@ func asSelecter(v any) core.Selecter {
 	case core.Selecter:
 		return v
 	default:
-		return expr.Literal(v)
+		return expr.Param(v)
 	}
 }
 
