@@ -71,6 +71,7 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			Join(cte, UsersTable.ID.Eq(TotalAmountsCTE.UserID)).
 			Where(TotalAmountsCTE.Total.Gt(100))
 
+		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
@@ -81,8 +82,9 @@ func TestSelectRender_WithCTE(t *testing.T) {
 				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
 				`WHERE "total_amounts"."total" > 100`,
-			query.Render(dialect.PostgreSQL{}),
+			str,
 		)
+		assert.Empty(t, args)
 	})
 
 	t.Run("Query with CTE with obtaining columns by string name", func(t *testing.T) {
@@ -91,6 +93,7 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			Join(cte, UsersTable.ID.Eq(cte.Column("user_id"))).
 			Where(cte.Column("total").Gt(100))
 
+		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (`+
@@ -101,43 +104,48 @@ func TestSelectRender_WithCTE(t *testing.T) {
 				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
 				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
 				`WHERE "total_amounts"."total" > 100`,
-			query.Render(dialect.PostgreSQL{}),
+			str,
 		)
+		assert.Empty(t, args)
 	})
 }
 
 func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 	t.Run("Recursive CTE method", func(t *testing.T) {
 		cte := q.
-			Select(q.Const(1)).
+			Select(q.Literal(1)).
 			CTE("numbers").
 			Recursive().
 			WithColumns("n")
 
 		query := q.Select(cte.Column("n"))
 
+		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
 				`SELECT "numbers"."n" FROM "numbers"`,
-			query.Render(dialect.PostgreSQL{}),
+			str,
 		)
+		assert.Empty(t, args)
 	})
 
 	t.Run("Recursive CTE shortcut", func(t *testing.T) {
 		cte := q.
-			Select(q.Const(1)).
+			Select(q.Literal(1)).
 			RecursiveCTE("numbers").
 			WithColumns("n")
 
 		query := q.Select(cte.Column("n"))
 
+		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
 				`SELECT "numbers"."n" FROM "numbers"`,
-			query.Render(dialect.PostgreSQL{}),
+			str,
 		)
+		assert.Empty(t, args)
 	})
 
 	t.Run("Recursive CTE with union all", func(t *testing.T) {
@@ -145,7 +153,7 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		require.NoError(t, q.Bind(&NumbersTable))
 
 		cte := q.
-			Select(q.Const(1)).
+			Select(q.Literal(1)).
 			UnionAll(
 				q.Select(NumbersTable.N.Add(1)).
 					Where(NumbersTable.N.Lt(3)),
@@ -155,6 +163,7 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 
 		query := q.Select(cte.Column("n"))
 
+		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (`+
@@ -162,23 +171,26 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 				`SELECT "numbers"."n" + 1 FROM "numbers" WHERE "numbers"."n" < 3`+
 				`) `+
 				`SELECT "numbers"."n" FROM "numbers"`,
-			query.Render(dialect.PostgreSQL{}),
+			str,
 		)
+		assert.Empty(t, args)
 	})
 }
 
 func TestSelectRender_WithMultipleCTEs(t *testing.T) {
-	cte1 := q.Select(q.Const(1)).CTE("cte1").WithColumns("c1")
+	cte1 := q.Select(q.Literal(1)).CTE("cte1").WithColumns("c1")
 	cte2 := q.Select(cte1.Column("c1")).CTE("cte2").WithColumns("c1")
 	query := q.Select(cte1.Column("c1"), cte2.Column("c1")).CrossJoin(cte2)
 
+	str, args := query.Render(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
 		`WITH "cte1" ("c1") AS (SELECT 1), `+
 			`"cte2" ("c1") AS (SELECT "cte1"."c1" FROM "cte1") `+
 			`SELECT "cte1"."c1", "cte2"."c1" FROM "cte1" CROSS JOIN "cte2"`,
-		query.Render(dialect.PostgreSQL{}),
+		str,
 	)
+	assert.Empty(t, args)
 }
 
 type Node struct {
@@ -210,7 +222,7 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 	require.NoError(t, q.Bind(&NodeTable))
 	require.NoError(t, q.Bind(&NodeStatusTable))
 
-	level := q.Const(1).As("level")
+	level := q.Literal(1).As("level")
 	base := q.
 		Select(NodeTable.ID, NodeTable.ParentID, level).
 		Join(NodeStatusTable, NodeTable.ID.Eq(NodeStatusTable.NodeID)).
@@ -231,6 +243,7 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 		Select(cte.Column("id"), cte.Column("parent_id"), cte.Column("level")).
 		OrderBy(cte.Column("level"))
 
+	str, args := query.Render(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
 		`WITH RECURSIVE "nodes" AS (`+
@@ -247,6 +260,7 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 			`)`+
 			`) `+
 			`SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level" FROM "nodes" ORDER BY "nodes"."level"`,
-		query.Render(dialect.PostgreSQL{}),
+		str,
 	)
+	assert.Empty(t, args)
 }

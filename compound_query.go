@@ -60,14 +60,15 @@ func (q CompoundQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-func (q CompoundQuery) Render(d dialect.DialectRenderer) string {
+func (q CompoundQuery) Render(d dialect.DialectRenderer) (string, []any) {
+	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
+
 	withCl := clauses.WithClause{}.WithClauseFor(q)
+	withCl.Render(&w, renderer)
+	q.RenderQueryExpression(&w, renderer)
 
-	withCl.Render(&w, d)
-	q.RenderQueryExpression(&w, d)
-
-	return w.String()
+	return w.String(), renderer.Args()
 }
 
 func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer) {

@@ -9,6 +9,7 @@ import (
 type DialectRenderer interface {
 	QuoteIdent(ident string) string
 	Literal(value any) string
+	Placeholder(position int) string
 	LimitOffset(limit, offset int) string
 }
 
@@ -32,6 +33,10 @@ func (BaseDialect) Literal(value any) string {
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+func (BaseDialect) Placeholder(position int) string {
+	return "?"
 }
 
 func (BaseDialect) LimitOffset(limit, offset int) string {

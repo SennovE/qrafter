@@ -25,7 +25,7 @@ func asSelecter(v any) core.Selecter {
 	case core.Selecter:
 		return v
 	default:
-		return expr.Const(v)
+		return expr.Literal(v)
 	}
 }
 
@@ -83,8 +83,12 @@ func (e Expression) Desc() Order {
 	return Desc(e)
 }
 
-func Const(v any) Expression {
-	return newExpression(expr.Const(v))
+func Literal(v any) Expression {
+	return newExpression(expr.Literal(v))
+}
+
+func Param(v any) Expression {
+	return newExpression(expr.Param(v))
 }
 
 func Star() Expression {

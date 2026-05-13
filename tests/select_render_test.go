@@ -26,7 +26,7 @@ func TestSelectRender_Basic(t *testing.T) {
 						UserTable.UserName.Eq("ABC"),
 						q.Or(
 							UserTable.Age.Ge("1"),
-							q.Const("Test").Eq(UserTable.UserName),
+							q.Literal("Test").Eq(UserTable.UserName),
 						),
 					),
 				),
@@ -40,7 +40,7 @@ func TestSelectRender_Basic(t *testing.T) {
 		},
 		{
 			"The right peer for a non-associative expression is indicated in brackets",
-			q.Select(q.Const(10).Sub(q.Const(7).Sub(3))),
+			q.Select(q.Literal(10).Sub(q.Literal(7).Sub(3))),
 			`SELECT 10 - (7 - 3)`,
 		},
 		{
@@ -115,7 +115,9 @@ func TestSelectRender_Basic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+			str, args := tt.query.Render(dialect.PostgreSQL{})
+			assert.Equal(t, tt.wantSQL, str)
+			assert.Empty(t, args)
 		})
 	}
 }
@@ -161,7 +163,9 @@ func TestSelectRender_WithJoin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+			str, args := tt.query.Render(dialect.PostgreSQL{})
+			assert.Equal(t, tt.wantSQL, str)
+			assert.Empty(t, args)
 		})
 	}
 }
@@ -171,16 +175,14 @@ func TestSelectRender_WithUnion(t *testing.T) {
 	require.NoError(t, q.Bind(&UserTable))
 
 	tests := []struct {
-		name  string
-		query interface {
-			Render(dialect.DialectRenderer) string
-		}
+		name    string
+		query   q.CompoundQuery
 		wantSQL string
 	}{
 		{
 			"Union",
-			q.Select(q.Const(1)).
-				Union(q.Select(q.Const(2))),
+			q.Select(q.Literal(1)).
+				Union(q.Select(q.Literal(2))),
 			`SELECT 1 UNION SELECT 2`,
 		},
 		{
@@ -197,34 +199,34 @@ func TestSelectRender_WithUnion(t *testing.T) {
 		},
 		{
 			"Union with final limit",
-			q.Select(q.Const(1)).
-				UnionAll(q.Select(q.Const(2))).
+			q.Select(q.Literal(1)).
+				UnionAll(q.Select(q.Literal(2))).
 				Limit(1),
 			`SELECT 1 UNION ALL SELECT 2 LIMIT 1`,
 		},
 		{
 			"Union with local limit in right arm",
-			q.Select(q.Const(1)).
+			q.Select(q.Literal(1)).
 				UnionAll(
-					q.Select(q.Const(2)).
+					q.Select(q.Literal(2)).
 						Limit(1),
 				),
 			`SELECT 1 UNION ALL (SELECT 2 LIMIT 1)`,
 		},
 		{
 			"Union with local limit in left arm and final limit",
-			q.Select(q.Const(1)).
+			q.Select(q.Literal(1)).
 				Limit(1).
-				UnionAll(q.Select(q.Const(2))).
+				UnionAll(q.Select(q.Literal(2))).
 				Limit(10),
 			`(SELECT 1 LIMIT 1) UNION ALL SELECT 2 LIMIT 10`,
 		},
 		{
 			"Union with local limit in compound left arm",
-			q.Select(q.Const(1)).
-				Union(q.Select(q.Const(2))).
+			q.Select(q.Literal(1)).
+				Union(q.Select(q.Literal(2))).
 				Limit(1).
-				UnionAll(q.Select(q.Const(3))).
+				UnionAll(q.Select(q.Literal(3))).
 				Limit(10),
 			`(SELECT 1 UNION SELECT 2 LIMIT 1) UNION ALL SELECT 3 LIMIT 10`,
 		},
@@ -232,7 +234,9 @@ func TestSelectRender_WithUnion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+			str, args := tt.query.Render(dialect.PostgreSQL{})
+			assert.Equal(t, tt.wantSQL, str)
+			assert.Empty(t, args)
 		})
 	}
 }
@@ -342,7 +346,9 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantSQL, tt.query.Render(dialect.PostgreSQL{}))
+			str, args := tt.query.Render(dialect.PostgreSQL{})
+			assert.Equal(t, tt.wantSQL, str)
+			assert.Empty(t, args)
 		})
 	}
 }

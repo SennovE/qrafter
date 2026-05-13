@@ -108,14 +108,15 @@ func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-func (q SelectQuery) Render(d dialect.DialectRenderer) string {
+func (q SelectQuery) Render(d dialect.DialectRenderer) (string, []any) {
+	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
+
 	withCl := q.withCl.WithClauseFor(q)
+	withCl.Render(&w, renderer)
+	q.RenderQueryExpression(&w, renderer)
 
-	withCl.Render(&w, d)
-	q.RenderQueryExpression(&w, d)
-
-	return w.String()
+	return w.String(), renderer.Args()
 }
 
 func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer) {

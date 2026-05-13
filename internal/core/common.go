@@ -19,7 +19,7 @@ type Renderer interface {
 }
 
 type QueryRenderer interface {
-	Render(d dialect.DialectRenderer) string
+	Render(d dialect.DialectRenderer) (string, []any)
 }
 
 type QueryExpression interface {

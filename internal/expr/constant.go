@@ -21,6 +21,6 @@ func (c ConstExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
 	w.WriteString(d.Literal(c.v))
 }
 
-func Const(value any) ConstExpression {
+func Literal(value any) ConstExpression {
 	return ConstExpression{v: value}
 }
