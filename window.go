@@ -1,6 +1,7 @@
 package qrafter
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/SennovE/qrafter/dialect"
@@ -12,7 +13,21 @@ import (
 type WindowSpec struct {
 	partitionBy []core.Selecter
 	orderBy     []core.Selecter
-	frame       string
+	frame       *WindowFrame
+}
+
+type WindowFrame struct {
+	mode  string
+	start WindowFrameBound
+	end   *WindowFrameBound
+}
+
+type WindowFrameMode struct {
+	mode string
+}
+
+type WindowFrameBound struct {
+	value string
 }
 
 type windowExpression struct {
@@ -40,9 +55,94 @@ func (s WindowSpec) OrderBy(items ...any) WindowSpec {
 	return s
 }
 
-func (s WindowSpec) Frame(frame string) WindowSpec {
-	s.frame = frame
+func (s WindowSpec) Frame(frame WindowFrame) WindowSpec {
+	s.frame = &frame
 	return s
+}
+
+func Rows() WindowFrameMode {
+	return WindowFrameMode{mode: "ROWS"}
+}
+
+func Range() WindowFrameMode {
+	return WindowFrameMode{mode: "RANGE"}
+}
+
+func Groups() WindowFrameMode {
+	return WindowFrameMode{mode: "GROUPS"}
+}
+
+func (m WindowFrameMode) Between(start, end WindowFrameBound) WindowFrame {
+	return WindowFrame{
+		mode:  m.mode,
+		start: start,
+		end:   &end,
+	}
+}
+
+func (m WindowFrameMode) Bound(bound WindowFrameBound) WindowFrame {
+	return WindowFrame{
+		mode:  m.mode,
+		start: bound,
+	}
+}
+
+func (m WindowFrameMode) UnboundedPreceding() WindowFrame {
+	return m.Bound(UnboundedPreceding())
+}
+
+func (m WindowFrameMode) CurrentRow() WindowFrame {
+	return m.Bound(CurrentRow())
+}
+
+func (m WindowFrameMode) Preceding(v any) WindowFrame {
+	return m.Bound(Preceding(v))
+}
+
+func (m WindowFrameMode) Following(v any) WindowFrame {
+	return m.Bound(Following(v))
+}
+
+func UnboundedPreceding() WindowFrameBound {
+	return WindowFrameBound{value: "UNBOUNDED PRECEDING"}
+}
+
+func UnboundedFollowing() WindowFrameBound {
+	return WindowFrameBound{value: "UNBOUNDED FOLLOWING"}
+}
+
+func CurrentRow() WindowFrameBound {
+	return WindowFrameBound{value: "CURRENT ROW"}
+}
+
+func Preceding(v any) WindowFrameBound {
+	return WindowFrameBound{value: fmt.Sprint(v) + " PRECEDING"}
+}
+
+func Following(v any) WindowFrameBound {
+	return WindowFrameBound{value: fmt.Sprint(v) + " FOLLOWING"}
+}
+
+func FrameBound(value string) WindowFrameBound {
+	return WindowFrameBound{value: value}
+}
+
+func (f WindowFrame) Render(w *strings.Builder, d dialect.DialectRenderer) {
+	w.WriteString(f.mode)
+	if f.end != nil {
+		w.WriteString(" BETWEEN ")
+		f.start.Render(w, d)
+		w.WriteString(" AND ")
+		f.end.Render(w, d)
+		return
+	}
+
+	w.WriteString(" ")
+	f.start.Render(w, d)
+}
+
+func (b WindowFrameBound) Render(w *strings.Builder, d dialect.DialectRenderer) {
+	w.WriteString(b.value)
 }
 
 func (s WindowSpec) Tables() core.TablesSet {
@@ -75,11 +175,11 @@ func (s WindowSpec) Render(w *strings.Builder, d dialect.DialectRenderer) {
 		rendered = true
 	}
 
-	if s.frame != "" {
+	if s.frame != nil {
 		if rendered {
 			w.WriteString(" ")
 		}
-		w.WriteString(s.frame)
+		s.frame.Render(w, d)
 	}
 
 	w.WriteString(")")

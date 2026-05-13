@@ -284,6 +284,60 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 			q.Select(q.Count().Over().As("total")),
 			`SELECT COUNT(*) OVER () AS "total"`,
 		},
+		{
+			"Window frame between bounds",
+			q.Select(
+				UserTable.UserName,
+				q.Sum(UserTable.Age).
+					Over(q.Window().
+						OrderBy(UserTable.UserName.Asc()).
+						Frame(q.Rows().Between(q.UnboundedPreceding(), q.CurrentRow())),
+					).
+					As("running_age"),
+			),
+			`SELECT "table"."user_name", ` +
+				`SUM("table"."userAge") OVER (` +
+				`ORDER BY "table"."user_name" ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` +
+				`) AS "running_age" FROM "table"`,
+		},
+		{
+			"Window frame single bound",
+			q.Select(
+				q.Count().
+					Over(q.Window().
+						OrderBy(UserTable.Age.Asc()).
+						Frame(q.Rows().Preceding(1)),
+					).
+					As("nearby_count"),
+			),
+			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS 1 PRECEDING) AS "nearby_count" FROM "table"`,
+		},
+		{
+			"Window frame string offset",
+			q.Select(
+				q.Count().
+					Over(q.Window().
+						OrderBy(UserTable.UserName.Asc()).
+						Frame(q.Range().Between(q.Preceding("INTERVAL '1 day'"), q.CurrentRow())),
+					).
+					As("daily_count"),
+			),
+			`SELECT COUNT(*) OVER (` +
+				`ORDER BY "table"."user_name" ASC RANGE BETWEEN INTERVAL '1 day' PRECEDING AND CURRENT ROW` +
+				`) AS "daily_count" FROM "table"`,
+		},
+		{
+			"Window frame custom bound",
+			q.Select(
+				q.Count().
+					Over(q.Window().
+						OrderBy(UserTable.Age.Asc()).
+						Frame(q.Rows().Bound(q.FrameBound("CURRENT ROW"))),
+					).
+					As("current_count"),
+			),
+			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS CURRENT ROW) AS "current_count" FROM "table"`,
+		},
 	}
 
 	for _, tt := range tests {
