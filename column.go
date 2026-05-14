@@ -11,6 +11,7 @@ type Column[T any] struct {
 	Expression
 	Name  string
 	Table core.TableRef
+	value T
 }
 
 var _ = (core.Selecter)(Column[int]{})

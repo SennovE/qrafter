@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,12 +28,10 @@ func TestTable_Bind(t *testing.T) {
 	require.NoError(t, err, "Bind should not return an error")
 
 	t.Run("Table reference is set", func(t *testing.T) {
-		expectedTable := core.TableRef{
-			Name:  u.TableConfig().Name,
-			Alias: "",
-		}
-		assert.Equal(t, expectedTable, u.UserName.Table)
-		assert.Equal(t, expectedTable, u.Age.Table)
+		assert.Equal(t, u.TableConfig().Name, u.UserName.Table.Name)
+		assert.Empty(t, u.UserName.Table.Alias)
+		assert.Equal(t, u.TableConfig().Name, u.Age.Table.Name)
+		assert.Empty(t, u.Age.Table.Alias)
 	})
 
 	t.Run("Column name is snake_case of struct field", func(t *testing.T) {
@@ -56,11 +53,9 @@ func TestTable_MakeAlias(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Table reference is set with alias", func(t *testing.T) {
-		expectedTable := core.TableRef{
-			Name:  u.TableConfig().Name,
-			Alias: alias,
-		}
-		assert.Equal(t, expectedTable, aliased.UserName.Table)
-		assert.Equal(t, expectedTable, aliased.Age.Table)
+		assert.Equal(t, u.TableConfig().Name, aliased.UserName.Table.Name)
+		assert.Equal(t, alias, aliased.UserName.Table.Alias)
+		assert.Equal(t, u.TableConfig().Name, aliased.Age.Table.Name)
+		assert.Equal(t, alias, aliased.Age.Table.Alias)
 	})
 }
