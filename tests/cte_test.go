@@ -6,7 +6,6 @@ import (
 	q "github.com/SennovE/qrafter"
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type Orders struct {
@@ -43,10 +42,8 @@ func (Numbers) TableConfig() q.TableConfig {
 }
 
 func TestSelectRender_WithCTE(t *testing.T) {
-	OrdersTable := Orders{}
-	require.NoError(t, q.Bind(&OrdersTable))
-	UsersTable := Users{}
-	require.NoError(t, q.Bind(&UsersTable))
+	UsersTable := q.MustNewTable[Users]()
+	OrdersTable := q.MustNewTable[Orders]()
 
 	cte := q.
 		Select(OrdersTable.UserID, q.Sum(OrdersTable.Amount)).
@@ -61,10 +58,7 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			Total  q.Column[int]
 		}
 
-		TotalAmountsCTE := TotalAmountsTable{}
-		err := cte.Bind(&TotalAmountsCTE)
-
-		require.NoError(t, err)
+		TotalAmountsCTE := q.MustBindTableToCTE[TotalAmountsTable](cte)
 
 		query := q.
 			Select(UsersTable.Name, TotalAmountsCTE.Total).
@@ -149,8 +143,7 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 	})
 
 	t.Run("Recursive CTE with union all", func(t *testing.T) {
-		NumbersTable := Numbers{}
-		require.NoError(t, q.Bind(&NumbersTable))
+		NumbersTable := q.MustNewTable[Numbers]()
 
 		cte := q.
 			Select(q.Literal(1)).
@@ -217,10 +210,8 @@ func (NodeStatus) TableConfig() q.TableConfig {
 }
 
 func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
-	NodeTable := Node{}
-	NodeStatusTable := NodeStatus{}
-	require.NoError(t, q.Bind(&NodeTable))
-	require.NoError(t, q.Bind(&NodeStatusTable))
+	NodeTable := q.MustNewTable[Node]()
+	NodeStatusTable := q.MustNewTable[NodeStatus]()
 
 	level := q.Literal(1).As("level")
 	base := q.

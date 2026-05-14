@@ -10,8 +10,7 @@ import (
 )
 
 func TestSelectRender_Basic(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	tests := []struct {
 		name    string
@@ -132,8 +131,7 @@ func TestSelectRender_Basic(t *testing.T) {
 }
 
 func TestSelectRender_WithJoin(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	ManagerTable, err := q.TableAlias(UserTable, "manager")
 	require.NoError(t, err)
@@ -184,8 +182,7 @@ func TestSelectRender_WithJoin(t *testing.T) {
 }
 
 func TestSelectRender_WithUnion(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	tests := []struct {
 		name    string
@@ -262,8 +259,7 @@ func TestSelectRender_WithUnion(t *testing.T) {
 }
 
 func TestSelectRender_WithWindowFunctions(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	tests := []struct {
 		name    string

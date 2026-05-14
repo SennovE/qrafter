@@ -6,12 +6,10 @@ import (
 	q "github.com/SennovE/qrafter"
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSelectRender_WithArgs(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	query := q.
 		Select(UserTable.UserName).
@@ -44,8 +42,7 @@ func TestCompoundQueryRender_WithArgs(t *testing.T) {
 }
 
 func TestCTERender_WithArgs(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	cte := q.
 		Select(UserTable.UserName).
@@ -72,8 +69,7 @@ func TestCTERender_WithArgs(t *testing.T) {
 }
 
 func TestSelectRender_WithQuestionMarkArgs(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	query := q.
 		Select(UserTable.UserName).
@@ -90,8 +86,7 @@ func TestSelectRender_WithQuestionMarkArgs(t *testing.T) {
 }
 
 func TestSelectRender_WithArgsKeepsConstantsInline(t *testing.T) {
-	UserTable := User{}
-	require.NoError(t, q.Bind(&UserTable))
+	UserTable := q.MustNewTable[User]()
 
 	query := q.
 		Select(q.Literal(1)).

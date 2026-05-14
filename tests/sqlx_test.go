@@ -35,8 +35,7 @@ func TestSQLXStructScanScansIntoColumns(t *testing.T) {
 
 	require.True(t, rows.Next())
 
-	var got sqlxUser
-	require.NoError(t, q.Bind(&got))
+	got := q.MustNewTable[sqlxUser]()
 	require.NoError(t, rows.StructScan(&got))
 
 	assert.Equal(t, 42, got.ID.Get())

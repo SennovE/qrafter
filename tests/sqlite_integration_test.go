@@ -59,8 +59,7 @@ func TestIntegrationSQLiteScanDest(t *testing.T) {
 func bindSQLiteUsers(t *testing.T) sqliteUser {
 	t.Helper()
 
-	users := sqliteUser{}
-	require.NoError(t, q.Bind(&users))
+	users := q.MustNewTable[sqliteUser]()
 
 	return users
 }

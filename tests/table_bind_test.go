@@ -22,31 +22,27 @@ func (User) TableConfig() qrafter.TableConfig {
 	}
 }
 
-func TestTable_Bind(t *testing.T) {
-	u := User{}
-	err := qrafter.Bind(&u)
-	require.NoError(t, err, "Bind should not return an error")
+func TestTable_NewTable(t *testing.T) {
+	t.Run("NewTable binds columns automatically", func(t *testing.T) {
+		u, err := qrafter.NewTable[User]()
+		require.NoError(t, err, "NewTable should not return an error")
 
-	t.Run("Table reference is set", func(t *testing.T) {
-		assert.Equal(t, u.TableConfig().Name, u.UserName.Table.Name)
-		assert.Empty(t, u.UserName.Table.Alias)
-		assert.Equal(t, u.TableConfig().Name, u.Age.Table.Name)
-		assert.Empty(t, u.Age.Table.Alias)
-	})
-
-	t.Run("Column name is snake_case of struct field", func(t *testing.T) {
+		assert.Equal(t, "table", u.UserName.Table.Name)
 		assert.Equal(t, "user_name", u.UserName.Name)
+		assert.Equal(t, "table", u.Age.Table.Name)
+		assert.Equal(t, "userAge", u.Age.Name)
 	})
 
-	t.Run("Column name is taken from db tag when present", func(t *testing.T) {
-		assert.Equal(t, "userAge", u.Age.Name)
+	t.Run("MustNewTable binds columns and panics on error", func(t *testing.T) {
+		u := qrafter.MustNewTable[User]()
+
+		assert.Equal(t, "table", u.UserName.Table.Name)
+		assert.Equal(t, "user_name", u.UserName.Name)
 	})
 }
 
 func TestTable_MakeAlias(t *testing.T) {
-	u := User{}
-	err := qrafter.Bind(&u)
-	require.NoError(t, err)
+	u, err := qrafter.NewTable[User]()
 
 	alias := "alias"
 	aliased, err := qrafter.TableAlias(u, alias)

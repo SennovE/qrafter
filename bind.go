@@ -8,21 +8,30 @@ import (
 	"github.com/SennovE/qrafter/internal/utils"
 )
 
-func Bind[T TableConfigProvider](table T) error {
-	config := table.TableConfig()
-	return bindWithTableRef(table, core.TableRef{Name: config.Name})
+func NewTable[T TableConfigProvider]() (T, error) {
+	var tmp T
+	config := tmp.TableConfig() 
+	table, err := bindWithTableRef[T](core.TableRef{Name: config.Name})
+	return table, err
 }
 
-func bindWithTableRef[T any](table T, tableRef core.TableRef) error {
-	if tableRef.Name == "" {
-		return fmt.Errorf("table name is empty")
+func MustNewTable[T TableConfigProvider]() T {
+	table, err := NewTable[T]()
+	if err != nil {
+		panic(err)
 	}
-	v := reflect.ValueOf(table)
-	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("table must be a pointer to a struct")
-	}
+	return table
+}
 
-	v = v.Elem()
+func bindWithTableRef[T any](tableRef core.TableRef) (T, error) {
+	var table T
+	if tableRef.Name == "" {
+		return table, fmt.Errorf("table name is empty")
+	}
+	v := reflect.ValueOf(&table).Elem()
+	if v.Kind() != reflect.Struct {
+		return table, fmt.Errorf("T must be a struct, got %s", v.Kind())
+	}
 	t := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
@@ -49,5 +58,5 @@ func bindWithTableRef[T any](table T, tableRef core.TableRef) error {
 		col.Bind(name, tableRef)
 	}
 
-	return nil
+	return table, nil
 }

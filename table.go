@@ -20,8 +20,8 @@ type TableConfig struct {
 
 func TableAlias[T TableConfigProvider](table T, alias string) (T, error) {
 	config := table.TableConfig()
-	err := bindWithTableRef(&table, core.TableRef{Name: config.Name, Alias: alias})
-	return table, err
+	aliasedTable, err := bindWithTableRef[T](core.TableRef{Name: config.Name, Alias: alias})
+	return aliasedTable, err
 }
 
 func GetTableRef(table TableConfigProvider) core.TableRef {

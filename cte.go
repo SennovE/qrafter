@@ -38,8 +38,16 @@ func (cte CommonTableExpression) Recursive() CommonTableExpression {
 	return cte
 }
 
-func (cte CommonTableExpression) Bind(table any) error {
-	return bindWithTableRef(table, cte.TableRef())
+func BindTableToCTE[T any](cte CommonTableExpression) (T, error) {
+	return bindWithTableRef[T](cte.TableRef())
+}
+
+func MustBindTableToCTE[T any](cte CommonTableExpression) T {
+	table, err := bindWithTableRef[T](cte.TableRef())
+	if err != nil {
+		panic(err)
+	}
+	return table
 }
 
 func (cte CommonTableExpression) Column(name string) Column[any] {
