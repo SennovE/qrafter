@@ -11,30 +11,35 @@ import (
 var _ sql.Scanner = (*Column[int])(nil)
 var _ driver.Valuer = Column[int]{}
 
+// Get returns the column's scanned or assigned value.
 func (c Column[T]) Get() T {
 	return c.value
 }
 
+// Set assigns the column's value.
 func (c *Column[T]) Set(value T) {
 	c.value = value
 }
 
+// Ptr returns a pointer to the column's value.
 func (c *Column[T]) Ptr() *T {
 	return &c.value
 }
 
+// Scan implements sql.Scanner for Column.
 func (c *Column[T]) Scan(src any) error {
 	var value T
 	if err := assignScannedValue(&value, src); err != nil {
-		if c.Name == "" {
+		if c.name == "" {
 			return err
 		}
-		return fmt.Errorf("scan column %q: %w", c.Name, err)
+		return fmt.Errorf("scan column %q: %w", c.name, err)
 	}
 	c.value = value
 	return nil
 }
 
+// Value implements driver.Valuer for Column.
 func (c Column[T]) Value() (driver.Value, error) {
 	if valuer, ok := any(c.value).(driver.Valuer); ok {
 		return valuer.Value()
@@ -45,6 +50,7 @@ func (c Column[T]) Value() (driver.Value, error) {
 	return driver.DefaultParameterConverter.ConvertValue(c.value)
 }
 
+// ScanDest returns scan destinations for exported Column fields in a struct pointer.
 func ScanDest(table any) ([]any, error) {
 	v := reflect.ValueOf(table)
 	if v.Kind() != reflect.Pointer || v.IsNil() || v.Elem().Kind() != reflect.Struct {

@@ -7,5 +7,5 @@ import (
 )
 
 type Clauser interface {
-	Render(w *strings.Builder, d dialect.DialectRenderer)
+	Render(w *strings.Builder, d dialect.Renderer)
 }

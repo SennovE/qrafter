@@ -8,6 +8,7 @@ import (
 	"github.com/SennovE/qrafter/internal/core"
 )
 
+// CompoundQuery represents a set operation such as UNION or UNION ALL.
 type CompoundQuery struct {
 	left          core.QueryExpression
 	operator      string
@@ -24,29 +25,35 @@ func newCompoundQuery(left core.QueryExpression, operator string, right core.Que
 	}
 }
 
+// OrderBy appends a final ORDER BY clause to the compound query.
 func (q CompoundQuery) OrderBy(items ...core.Selecter) CompoundQuery {
 	q.orderByCl.Items = append(q.orderByCl.Items, items...)
 	return q
 }
 
+// Limit sets a final LIMIT clause on the compound query.
 func (q CompoundQuery) Limit(l int) CompoundQuery {
 	q.limitOffsetCl.Limit = l
 	return q
 }
 
+// Offset sets a final OFFSET clause on the compound query.
 func (q CompoundQuery) Offset(o int) CompoundQuery {
 	q.limitOffsetCl.Offset = o
 	return q
 }
 
+// Union combines this query with another query using UNION.
 func (q CompoundQuery) Union(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(q, "UNION", other)
 }
 
+// UnionAll combines this query with another query using UNION ALL.
 func (q CompoundQuery) UnionAll(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(q, "UNION ALL", other)
 }
 
+// CTE wraps the compound query as a common table expression.
 func (q CompoundQuery) CTE(name string) CommonTableExpression {
 	return CommonTableExpression{
 		ref: &core.CTERef{
@@ -56,11 +63,13 @@ func (q CompoundQuery) CTE(name string) CommonTableExpression {
 	}
 }
 
+// RecursiveCTE wraps the compound query as a recursive common table expression.
 func (q CompoundQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-func (q CompoundQuery) Render(d dialect.DialectRenderer) (string, []any) {
+// Render renders the compound query and returns SQL plus bound arguments.
+func (q CompoundQuery) Render(d dialect.Renderer) (string, []any) {
 	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
 
@@ -71,7 +80,8 @@ func (q CompoundQuery) Render(d dialect.DialectRenderer) (string, []any) {
 	return w.String(), renderer.Args()
 }
 
-func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer) {
+// RenderQueryExpression writes the compound query body.
+func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
 	q.left.RenderSetOperand(w, d)
 	w.WriteString(" ")
 	w.WriteString(q.operator)
@@ -81,12 +91,14 @@ func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.Diale
 	q.limitOffsetCl.Render(w, d)
 }
 
-func (q CompoundQuery) RenderSetOperand(w *strings.Builder, d dialect.DialectRenderer) {
+// RenderSetOperand writes the compound query as a parenthesized set operand.
+func (q CompoundQuery) RenderSetOperand(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("(")
 	q.RenderQueryExpression(w, d)
 	w.WriteString(")")
 }
 
+// CTEs returns common table expressions referenced by the compound query.
 func (q CompoundQuery) CTEs() []*core.CTERef {
 	ctes := q.left.CTEs()
 	ctes = append(ctes, q.right.CTEs()...)

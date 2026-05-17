@@ -14,7 +14,7 @@ type WhereClause struct {
 
 var _ = (Clauser)(WhereClause{})
 
-func (c WhereClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c WhereClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Predicates) == 0 {
 		return
 	}

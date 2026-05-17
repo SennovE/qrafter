@@ -14,7 +14,7 @@ type HavingClause struct {
 
 var _ = (Clauser)(HavingClause{})
 
-func (c HavingClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c HavingClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Predicates) == 0 {
 		return
 	}

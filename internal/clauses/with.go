@@ -14,7 +14,7 @@ type WithClause struct {
 
 var _ = (Clauser)(WithClause{})
 
-func (c WithClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c WithClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.CTEs) == 0 {
 		return
 	}

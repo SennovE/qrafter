@@ -18,7 +18,7 @@ var _ = (core.Predicater)(BinaryPredicate{})
 
 func (e BinaryPredicate) Predicate() {}
 
-func (e BinaryPredicate) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (e BinaryPredicate) Render(w *strings.Builder, d dialect.Renderer) {
 	core.RenderChild(e.a, e.Precedence(), false, w, d)
 	fmt.Fprintf(w, " %s ", e.op)
 	core.RenderChild(e.b, e.Precedence(), false, w, d)

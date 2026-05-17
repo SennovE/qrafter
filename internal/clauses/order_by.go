@@ -13,7 +13,7 @@ type OrderByClause struct {
 
 var _ = (Clauser)(OrderByClause{})
 
-func (c OrderByClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c OrderByClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Items) == 0 {
 		return
 	}

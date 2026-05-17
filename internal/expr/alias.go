@@ -18,7 +18,7 @@ func (a AliasedExpression) Tables() core.TablesSet {
 	return a.expr.Tables()
 }
 
-func (a AliasedExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (a AliasedExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	a.expr.Render(w, d)
 	w.WriteString(" AS ")
 	w.WriteString(d.QuoteIdent(a.alias))

@@ -8,6 +8,7 @@ import (
 	"github.com/SennovE/qrafter/internal/core"
 )
 
+// SelectQuery represents a SELECT statement under construction.
 type SelectQuery struct {
 	withCl        clauses.WithClause
 	selectCl      clauses.SelectClause
@@ -19,6 +20,7 @@ type SelectQuery struct {
 	limitOffsetCl clauses.LimitOffsetClause
 }
 
+// Select starts a SELECT query for the given expressions.
 func Select(cols ...core.Selecter) SelectQuery {
 	q := SelectQuery{
 		selectCl: clauses.SelectClause{Columns: cols},
@@ -27,28 +29,34 @@ func Select(cols ...core.Selecter) SelectQuery {
 	return q
 }
 
+// Where appends predicates to the query's WHERE clause.
 func (q SelectQuery) Where(predicates ...core.Predicater) SelectQuery {
 	clauses.UpdateTables(&q.fromCl, predicates)
 	q.whereCl.Predicates = append(q.whereCl.Predicates, predicates...)
 	return q
 }
 
+// Join adds an INNER JOIN to the query.
 func (q SelectQuery) Join(table TableConfigProvider, predicates ...core.Predicater) SelectQuery {
 	return q.join("JOIN", table, predicates...)
 }
 
+// LeftJoin adds a LEFT JOIN to the query.
 func (q SelectQuery) LeftJoin(table TableConfigProvider, predicates ...core.Predicater) SelectQuery {
 	return q.join("LEFT JOIN", table, predicates...)
 }
 
+// RightJoin adds a RIGHT JOIN to the query.
 func (q SelectQuery) RightJoin(table TableConfigProvider, predicates ...core.Predicater) SelectQuery {
 	return q.join("RIGHT JOIN", table, predicates...)
 }
 
+// FullJoin adds a FULL JOIN to the query.
 func (q SelectQuery) FullJoin(table TableConfigProvider, predicates ...core.Predicater) SelectQuery {
 	return q.join("FULL JOIN", table, predicates...)
 }
 
+// CrossJoin adds a CROSS JOIN to the query.
 func (q SelectQuery) CrossJoin(table TableConfigProvider) SelectQuery {
 	return q.join("CROSS JOIN", table)
 }
@@ -59,42 +67,50 @@ func (q SelectQuery) join(joinType string, table TableConfigProvider, predicates
 	return q
 }
 
+// GroupBy appends expressions to the GROUP BY clause.
 func (q SelectQuery) GroupBy(cols ...core.Selecter) SelectQuery {
 	clauses.UpdateTables(&q.fromCl, cols)
 	q.groupByCl.Columns = append(q.groupByCl.Columns, cols...)
 	return q
 }
 
+// Having appends predicates to the HAVING clause.
 func (q SelectQuery) Having(predicates ...core.Predicater) SelectQuery {
 	clauses.UpdateTables(&q.fromCl, predicates)
 	q.havingCl.Predicates = append(q.havingCl.Predicates, unwrapPredicates(predicates)...)
 	return q
 }
 
+// OrderBy appends expressions to the ORDER BY clause.
 func (q SelectQuery) OrderBy(items ...core.Selecter) SelectQuery {
 	clauses.UpdateTables(&q.fromCl, items)
 	q.orderByCl.Items = append(q.orderByCl.Items, items...)
 	return q
 }
 
+// Limit sets a LIMIT clause on the query.
 func (q SelectQuery) Limit(l int) SelectQuery {
 	q.limitOffsetCl.Limit = l
 	return q
 }
 
+// Offset sets an OFFSET clause on the query.
 func (q SelectQuery) Offset(o int) SelectQuery {
 	q.limitOffsetCl.Offset = o
 	return q
 }
 
+// Union combines this query with another query using UNION.
 func (q SelectQuery) Union(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(q, "UNION", other)
 }
 
+// UnionAll combines this query with another query using UNION ALL.
 func (q SelectQuery) UnionAll(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(q, "UNION ALL", other)
 }
 
+// CTE wraps the query as a common table expression.
 func (q SelectQuery) CTE(name string) CommonTableExpression {
 	return CommonTableExpression{
 		ref: &core.CTERef{
@@ -104,11 +120,13 @@ func (q SelectQuery) CTE(name string) CommonTableExpression {
 	}
 }
 
+// RecursiveCTE wraps the query as a recursive common table expression.
 func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-func (q SelectQuery) Render(d dialect.DialectRenderer) (string, []any) {
+// Render renders the query and returns SQL plus bound arguments.
+func (q SelectQuery) Render(d dialect.Renderer) (string, []any) {
 	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
 
@@ -119,7 +137,8 @@ func (q SelectQuery) Render(d dialect.DialectRenderer) (string, []any) {
 	return w.String(), renderer.Args()
 }
 
-func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.DialectRenderer) {
+// RenderQueryExpression writes the SELECT query body.
+func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
 	clauses := []clauses.Clauser{
 		q.selectCl,
 		q.fromCl,
@@ -135,7 +154,8 @@ func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.Dialect
 	}
 }
 
-func (q SelectQuery) RenderSetOperand(w *strings.Builder, d dialect.DialectRenderer) {
+// RenderSetOperand writes the query as an operand in a set operation.
+func (q SelectQuery) RenderSetOperand(w *strings.Builder, d dialect.Renderer) {
 	if len(q.orderByCl.Items) > 0 || q.limitOffsetCl.Limit != 0 || q.limitOffsetCl.Offset != 0 {
 		w.WriteString("(")
 		q.RenderQueryExpression(w, d)
@@ -145,6 +165,7 @@ func (q SelectQuery) RenderSetOperand(w *strings.Builder, d dialect.DialectRende
 	q.RenderQueryExpression(w, d)
 }
 
+// CTEs returns common table expressions referenced by the query.
 func (q SelectQuery) CTEs() []*core.CTERef {
 	ctes := make([]*core.CTERef, 0)
 	for _, table := range core.GetSortedTables(q.fromCl.Tables) {

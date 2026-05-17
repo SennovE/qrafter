@@ -23,7 +23,7 @@ var _ = (core.Predicater)(LogicalPredicate{})
 
 func (e LogicalPredicate) Predicate() {}
 
-func (e LogicalPredicate) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (e LogicalPredicate) Render(w *strings.Builder, d dialect.Renderer) {
 	for i, p := range e.ps {
 		if i > 0 {
 			fmt.Fprintf(w, " %s ", e.op)

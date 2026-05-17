@@ -13,7 +13,7 @@ type SelectClause struct {
 
 var _ = (Clauser)(SelectClause{})
 
-func (c SelectClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c SelectClause) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("SELECT ")
 	core.RenderWithDelimiter(w, d, ", ", c.Columns)
 }

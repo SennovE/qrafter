@@ -15,7 +15,7 @@ type FromClause struct {
 
 var _ = (Clauser)(FromClause{})
 
-func (c FromClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c FromClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Tables) == 0 && len(c.Joins) == 0 {
 		return
 	}

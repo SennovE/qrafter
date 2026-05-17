@@ -17,7 +17,7 @@ type JoinClause struct {
 
 var _ = (Clauser)(JoinClause{})
 
-func (j JoinClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (j JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
 	fmt.Fprintf(w, " %s ", j.Type)
 	j.Table.Render(w, d)
 

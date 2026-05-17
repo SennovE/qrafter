@@ -37,7 +37,7 @@ func (t TableRef) SQLName() string {
 	return t.Alias
 }
 
-func (t TableRef) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (t TableRef) Render(w *strings.Builder, d dialect.Renderer) {
 	if t.Alias == "" {
 		w.WriteString(d.QuoteIdent(t.Name))
 	} else {
@@ -47,7 +47,7 @@ func (t TableRef) Render(w *strings.Builder, d dialect.DialectRenderer) {
 	}
 }
 
-func (cte *CTERef) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (cte *CTERef) Render(w *strings.Builder, d dialect.Renderer) {
 	if cte == nil {
 		return
 	}

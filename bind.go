@@ -8,13 +8,17 @@ import (
 	"github.com/SennovE/qrafter/internal/utils"
 )
 
+// NewTable creates a table model and binds its exported Column fields.
+// Column names come from the field's db tag when present; otherwise the Go
+// field name is converted to snake_case, for example UserName becomes user_name.
 func NewTable[T TableConfigProvider]() (T, error) {
 	var tmp T
-	config := tmp.TableConfig() 
+	config := tmp.TableConfig()
 	table, err := bindWithTableRef[T](core.TableRef{Name: config.Name})
 	return table, err
 }
 
+// MustNewTable is like NewTable but panics if the table cannot be bound.
 func MustNewTable[T TableConfigProvider]() T {
 	table, err := NewTable[T]()
 	if err != nil {
@@ -30,7 +34,7 @@ func bindWithTableRef[T any](tableRef core.TableRef) (T, error) {
 	}
 	v := reflect.ValueOf(&table).Elem()
 	if v.Kind() != reflect.Struct {
-		return table, fmt.Errorf("T must be a struct, got %s", v.Kind())
+		return table, fmt.Errorf("type T must be a struct, got %s", v.Kind())
 	}
 	t := v.Type()
 

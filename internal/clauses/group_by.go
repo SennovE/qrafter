@@ -13,7 +13,7 @@ type GroupByClause struct {
 
 var _ = (Clauser)(GroupByClause{})
 
-func (c GroupByClause) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (c GroupByClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Columns) == 0 {
 		return
 	}

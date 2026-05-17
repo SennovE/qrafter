@@ -16,7 +16,7 @@ type BinaryExpression struct {
 
 var _ = (core.Selecter)(BinaryExpression{})
 
-func (e BinaryExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (e BinaryExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	core.RenderChild(e.a, e.Precedence(), false, w, d)
 	fmt.Fprintf(w, " %s ", e.op)
 	core.RenderChild(e.b, e.Precedence(), e.parenthesizeRightPeer(), w, d)

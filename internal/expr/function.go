@@ -15,7 +15,7 @@ type FunctionExpression struct {
 
 var _ = (core.Selecter)(FunctionExpression{})
 
-func (e FunctionExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (e FunctionExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString(e.name)
 	w.WriteString("(")
 	core.RenderWithDelimiter(w, d, ", ", e.args)
@@ -43,7 +43,7 @@ type DistinctExpression struct {
 
 var _ = (core.Selecter)(DistinctExpression{})
 
-func (e DistinctExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (e DistinctExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("DISTINCT ")
 	e.expr.Render(w, d)
 }

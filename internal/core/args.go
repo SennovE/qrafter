@@ -7,12 +7,12 @@ type ArgRenderer interface {
 }
 
 type ArgsRenderer struct {
-	dialect.DialectRenderer
+	dialect.Renderer
 	args []any
 }
 
-func NewArgsRenderer(d dialect.DialectRenderer) *ArgsRenderer {
-	return &ArgsRenderer{DialectRenderer: d}
+func NewArgsRenderer(d dialect.Renderer) *ArgsRenderer {
+	return &ArgsRenderer{Renderer: d}
 }
 
 func (r *ArgsRenderer) AddArg(value any) string {

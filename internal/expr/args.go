@@ -17,7 +17,7 @@ func (a ArgExpression) Tables() core.TablesSet {
 	return nil
 }
 
-func (a ArgExpression) Render(w *strings.Builder, d dialect.DialectRenderer) {
+func (a ArgExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	if renderer, ok := d.(core.ArgRenderer); ok {
 		w.WriteString(renderer.AddArg(a.v))
 		return
