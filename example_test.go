@@ -19,6 +19,29 @@ func (exampleUser) TableConfig() q.TableConfig {
 	return q.TableConfig{Name: "users"}
 }
 
+type Node struct {
+	ID       q.Column[int]
+	ParentID q.Column[int]
+	Value    q.Column[int]
+}
+
+func (Node) TableConfig() q.TableConfig {
+	return q.TableConfig{
+		Name: "node",
+	}
+}
+
+type NodeStatus struct {
+	NodeID q.Column[int]
+	Status q.Column[string]
+}
+
+func (NodeStatus) TableConfig() q.TableConfig {
+	return q.TableConfig{
+		Name: "node_status",
+	}
+}
+
 func ExampleSelect() {
 	users := q.MustNewTable[exampleUser]()
 
@@ -83,4 +106,45 @@ func ExampleScanDest() {
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func ExampleSelectQuery_CTEs() {
+	cte1 := q.Select(q.Literal(1)).CTE("cte1").WithColumns("c1")
+	query := q.Select(cte1.Column("c1"))
+
+	sql, _ := query.Render(dialect.PostgreSQL{})
+	fmt.Println(sql)
+	// Output:
+	// WITH "cte1" ("c1") AS (SELECT 1) SELECT "cte1"."c1" FROM "cte1"
+}
+
+func ExampleSelectQuery_CTEs_complex_recursive_query() {
+	NodeTable := q.MustNewTable[Node]()
+	NodeStatusTable := q.MustNewTable[NodeStatus]()
+
+	level := q.Literal(1).As("level")
+	base := q.
+		Select(NodeTable.ID, NodeTable.ParentID, level).
+		Join(NodeStatusTable, NodeTable.ID.Eq(NodeStatusTable.NodeID)).
+		Where(NodeStatusTable.Status.Eq(q.Literal("active"))).
+		CTE("nodes").
+		Recursive().
+		WithColumns("id", "parent_id", "level")
+
+	rlevel := base.Column("level").Add(q.Literal(1)).As("level")
+
+	recursive := q.
+		Select(NodeTable.ID, NodeTable.ParentID, rlevel).
+		Join(base, NodeTable.ParentID.Eq(base.Column("id")))
+
+	cte := base.UnionAll(recursive.Limit(1)).CTE("nodes")
+
+	query := q.
+		Select(cte.Column("id"), cte.Column("parent_id"), cte.Column("level")).
+		OrderBy(cte.Column("level"))
+
+	sql, _ := query.Render(dialect.PostgreSQL{})
+	fmt.Println(sql)
+	// Output:
+	// WITH RECURSIVE "nodes" AS (SELECT "node"."id", "node"."parent_id", 1 AS "level" FROM "node" JOIN "node_status" ON "node"."id" = "node_status"."node_id" WHERE "node_status"."status" = 'active' UNION ALL (SELECT "node"."id", "node"."parent_id", "nodes"."level" + 1 AS "level" FROM "node" JOIN "nodes" ON "node"."parent_id" = "nodes"."id" LIMIT 1)) SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level" FROM "nodes" ORDER BY "nodes"."level"
 }
