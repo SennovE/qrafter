@@ -12,7 +12,7 @@ type AliasedExpression struct {
 	alias string
 }
 
-var _ = (core.Selecter)(AliasedExpression{})
+var _ core.Selecter = AliasedExpression{}
 
 func (a AliasedExpression) Tables() core.TablesSet {
 	return a.expr.Tables()

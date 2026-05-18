@@ -12,7 +12,7 @@ type HavingClause struct {
 	Predicates []core.Predicater
 }
 
-var _ = (Clauser)(HavingClause{})
+var _ Clauser = HavingClause{}
 
 func (c HavingClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Predicates) == 0 {

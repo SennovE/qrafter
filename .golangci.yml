@@ -12,25 +12,19 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-
     - revive
     - gocritic
     - misspell
     - goconst
     - prealloc
-
     - gosec
     - bodyclose
     - sqlclosecheck
-
     - gocyclo
     - gocognit
 
   exclusions:
     rules:
-      - path: _test\.go
-        text: "Using the variable on range scope .* in function literal"
-
       - path: _test\.go
         linters:
           - gocognit
@@ -46,33 +40,34 @@ linters:
         linters:
           - gocritic
 
-linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-    disabled-checks:
-      - commentFormatting
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - commentFormatting
 
-  gocyclo:
-    min-complexity: 15
+    gocyclo:
+      min-complexity: 15
 
-  gocognit:
-    min-complexity: 20
+    gocognit:
+      min-complexity: 20
 
-  goconst:
-    min-len: 2
-    min-occurrences: 2
+    goconst:
+      min-len: 2
+      min-occurrences: 2
 
-  misspell:
-    locale: US
+    misspell:
+      locale: US
 
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: true
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
 
-issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt
+    - goimports

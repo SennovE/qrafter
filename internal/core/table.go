@@ -17,7 +17,7 @@ type TableRef struct {
 	CTE   *CTERef
 }
 
-var _ = (Renderer)(TableRef{})
+var _ Renderer = TableRef{}
 
 type TablesSet = map[TableRef]struct{}
 
@@ -28,7 +28,7 @@ type CTERef struct {
 	Recursive bool
 }
 
-var _ = (Renderer)((*CTERef)(nil))
+var _ Renderer = (*CTERef)(nil)
 
 func (t TableRef) SQLName() string {
 	if t.Alias == "" {

@@ -14,7 +14,7 @@ type Order struct {
 	nulls     string
 }
 
-var _ = (core.Selecter)(Order{})
+var _ core.Selecter = Order{}
 
 func newOrder(v any, direction string) Order {
 	return Order{

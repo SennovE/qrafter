@@ -14,7 +14,7 @@ type BinaryExpression struct {
 	op   string
 }
 
-var _ = (core.Selecter)(BinaryExpression{})
+var _ core.Selecter = BinaryExpression{}
 
 func (e BinaryExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	core.RenderChild(e.a, e.Precedence(), false, w, d)

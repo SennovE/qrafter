@@ -8,8 +8,10 @@ import (
 	"strconv"
 )
 
-var _ sql.Scanner = (*Column[int])(nil)
-var _ driver.Valuer = Column[int]{}
+var (
+	_ sql.Scanner   = (*Column[int])(nil)
+	_ driver.Valuer = Column[int]{}
+)
 
 // Get returns the column's scanned or assigned value.
 func (c Column[T]) Get() T {
@@ -79,7 +81,7 @@ func ScanDest(table any) ([]any, error) {
 	return destinations, nil
 }
 
-func assignScannedValue(dest any, src any) error {
+func assignScannedValue(dest, src any) error {
 	if scanner, ok := dest.(sql.Scanner); ok {
 		return scanner.Scan(src)
 	}

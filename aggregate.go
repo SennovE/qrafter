@@ -10,7 +10,7 @@ type Aggregate struct {
 	Expression
 }
 
-var _ = (core.Aggregater)(Aggregate{})
+var _ core.Aggregater = Aggregate{}
 
 func newAggregate(s core.Selecter) Aggregate {
 	return Aggregate{Expression: newExpression(s)}

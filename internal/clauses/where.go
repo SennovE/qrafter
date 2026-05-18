@@ -12,7 +12,7 @@ type WhereClause struct {
 	Predicates []core.Predicater
 }
 
-var _ = (Clauser)(WhereClause{})
+var _ Clauser = WhereClause{}
 
 func (c WhereClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Predicates) == 0 {

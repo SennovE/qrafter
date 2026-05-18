@@ -19,7 +19,7 @@ const (
 	OpOr  = "OR"
 )
 
-var _ = (core.Predicater)(LogicalPredicate{})
+var _ core.Predicater = LogicalPredicate{}
 
 func (e LogicalPredicate) Predicate() {}
 

@@ -11,7 +11,7 @@ type OrderByClause struct {
 	Items []core.Selecter
 }
 
-var _ = (Clauser)(OrderByClause{})
+var _ Clauser = OrderByClause{}
 
 func (c OrderByClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Items) == 0 {

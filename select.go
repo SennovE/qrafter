@@ -139,7 +139,7 @@ func (q SelectQuery) Render(d dialect.Renderer) (string, []any) {
 
 // RenderQueryExpression writes the SELECT query body.
 func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
-	clauses := []clauses.Clauser{
+	cls := []clauses.Clauser{
 		q.selectCl,
 		q.fromCl,
 		q.whereCl,
@@ -149,7 +149,7 @@ func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.Rendere
 		q.limitOffsetCl,
 	}
 
-	for _, cl := range clauses {
+	for _, cl := range cls {
 		cl.Render(w, d)
 	}
 }

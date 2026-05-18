@@ -9,7 +9,7 @@ import (
 
 type StarExpression struct{}
 
-var _ = (core.Selecter)(StarExpression{})
+var _ core.Selecter = StarExpression{}
 
 func (e StarExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("*")

@@ -15,7 +15,7 @@ type Column[T any] struct {
 	value T
 }
 
-var _ = (core.Selecter)(Column[int]{})
+var _ core.Selecter = Column[int]{}
 
 // TableRefer identifies values that carry table reference information.
 type TableRefer interface {

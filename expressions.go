@@ -13,7 +13,7 @@ type Expression struct {
 	selecter core.Selecter
 }
 
-var _ = (core.Selecter)(Expression{})
+var _ core.Selecter = Expression{}
 
 func newExpression(s core.Selecter) Expression {
 	return Expression{selecter: s}

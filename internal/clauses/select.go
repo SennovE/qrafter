@@ -11,7 +11,7 @@ type SelectClause struct {
 	Columns []core.Selecter
 }
 
-var _ = (Clauser)(SelectClause{})
+var _ Clauser = SelectClause{}
 
 func (c SelectClause) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("SELECT ")

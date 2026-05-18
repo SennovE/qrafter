@@ -13,7 +13,7 @@ type Predicate struct {
 	predicater core.Predicater
 }
 
-var _ = (core.Predicater)(Predicate{})
+var _ core.Predicater = Predicate{}
 
 func newPredicate(p core.Predicater) Predicate {
 	return Predicate{predicater: p}

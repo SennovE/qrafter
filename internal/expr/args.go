@@ -11,7 +11,7 @@ type ArgExpression struct {
 	v any
 }
 
-var _ = (core.Selecter)(ArgExpression{})
+var _ core.Selecter = ArgExpression{}
 
 func (a ArgExpression) Tables() core.TablesSet {
 	return nil

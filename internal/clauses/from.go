@@ -13,7 +13,7 @@ type FromClause struct {
 	Joins  []JoinClause
 }
 
-var _ = (Clauser)(FromClause{})
+var _ Clauser = FromClause{}
 
 func (c FromClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Tables) == 0 && len(c.Joins) == 0 {

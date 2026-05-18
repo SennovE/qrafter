@@ -11,7 +11,7 @@ type ConstExpression struct {
 	v any
 }
 
-var _ = (core.Selecter)(ConstExpression{})
+var _ core.Selecter = ConstExpression{}
 
 func (c ConstExpression) Tables() core.TablesSet {
 	return nil

@@ -13,7 +13,7 @@ type FunctionExpression struct {
 	args []core.Selecter
 }
 
-var _ = (core.Selecter)(FunctionExpression{})
+var _ core.Selecter = FunctionExpression{}
 
 func (e FunctionExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString(e.name)
@@ -41,7 +41,7 @@ type DistinctExpression struct {
 	expr core.Selecter
 }
 
-var _ = (core.Selecter)(DistinctExpression{})
+var _ core.Selecter = DistinctExpression{}
 
 func (e DistinctExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("DISTINCT ")

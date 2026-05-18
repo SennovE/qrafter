@@ -4,6 +4,6 @@ import (
 	"strings"
 )
 
-func QuoteWith(s string, quote string) string {
+func QuoteWith(s, quote string) string {
 	return quote + strings.ReplaceAll(s, quote, quote+quote) + quote
 }

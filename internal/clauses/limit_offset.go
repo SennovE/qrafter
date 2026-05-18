@@ -10,7 +10,7 @@ type LimitOffsetClause struct {
 	Limit, Offset int
 }
 
-var _ = (Clauser)(LimitOffsetClause{})
+var _ Clauser = LimitOffsetClause{}
 
 func (c LimitOffsetClause) Render(w *strings.Builder, d dialect.Renderer) {
 	rendered := d.LimitOffset(c.Limit, c.Offset)

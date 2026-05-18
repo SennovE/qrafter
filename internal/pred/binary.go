@@ -14,7 +14,7 @@ type BinaryPredicate struct {
 	op   string
 }
 
-var _ = (core.Predicater)(BinaryPredicate{})
+var _ core.Predicater = BinaryPredicate{}
 
 func (e BinaryPredicate) Predicate() {}
 

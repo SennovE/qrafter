@@ -39,7 +39,7 @@ type windowExpression struct {
 	spec WindowSpec
 }
 
-var _ = (core.Selecter)(windowExpression{})
+var _ core.Selecter = windowExpression{}
 
 // Window starts an empty window specification.
 func Window() WindowSpec {

@@ -15,20 +15,20 @@ type JoinClause struct {
 	Predicates []core.Predicater
 }
 
-var _ = (Clauser)(JoinClause{})
+var _ Clauser = JoinClause{}
 
-func (j JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
-	fmt.Fprintf(w, " %s ", j.Type)
-	j.Table.Render(w, d)
+func (c JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
+	fmt.Fprintf(w, " %s ", c.Type)
+	c.Table.Render(w, d)
 
-	if len(j.Predicates) == 0 {
+	if len(c.Predicates) == 0 {
 		return
 	}
 
 	w.WriteString(" ON ")
-	if len(j.Predicates) == 1 {
-		j.Predicates[0].Render(w, d)
+	if len(c.Predicates) == 1 {
+		c.Predicates[0].Render(w, d)
 		return
 	}
-	pred.Logical(pred.OpAnd, j.Predicates...).Render(w, d)
+	pred.Logical(pred.OpAnd, c.Predicates...).Render(w, d)
 }

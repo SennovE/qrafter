@@ -11,7 +11,7 @@ type GroupByClause struct {
 	Columns []core.Selecter
 }
 
-var _ = (Clauser)(GroupByClause{})
+var _ Clauser = GroupByClause{}
 
 func (c GroupByClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if len(c.Columns) == 0 {
