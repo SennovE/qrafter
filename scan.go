@@ -95,56 +95,16 @@ func assignScannedReflectValue(dest reflect.Value, src any) error {
 	}
 
 	if dest.Kind() == reflect.Pointer {
-		dest.Set(reflect.New(dest.Type().Elem()))
-		return assignScannedValue(dest.Interface(), src)
+		return assignPointer(dest, src)
 	}
 
 	srcValue := reflect.ValueOf(src)
-	if srcValue.Type().AssignableTo(dest.Type()) {
-		if srcBytes, ok := src.([]byte); ok {
-			dest.Set(reflect.ValueOf(cloneBytes(srcBytes)))
-			return nil
-		}
-		dest.Set(srcValue)
+	if assignDirect(dest, src, srcValue) {
 		return nil
 	}
 
-	switch dest.Kind() {
-	case reflect.Interface:
-		dest.Set(srcValue)
-		return nil
-	case reflect.String:
-		return assignString(dest, src)
-	case reflect.Bool:
-		value, err := strconv.ParseBool(asString(src))
-		if err != nil {
-			return conversionError(src, dest.Type(), err)
-		}
-		dest.SetBool(value)
-		return nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		value, err := strconv.ParseInt(asString(src), 10, dest.Type().Bits())
-		if err != nil {
-			return conversionError(src, dest.Type(), err)
-		}
-		dest.SetInt(value)
-		return nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		value, err := strconv.ParseUint(asString(src), 10, dest.Type().Bits())
-		if err != nil {
-			return conversionError(src, dest.Type(), err)
-		}
-		dest.SetUint(value)
-		return nil
-	case reflect.Float32, reflect.Float64:
-		value, err := strconv.ParseFloat(asString(src), dest.Type().Bits())
-		if err != nil {
-			return conversionError(src, dest.Type(), err)
-		}
-		dest.SetFloat(value)
-		return nil
-	case reflect.Slice:
-		return assignSlice(dest, src)
+	if ok, err := assignByKind(dest, src); ok {
+		return err
 	}
 
 	if srcValue.Type().ConvertibleTo(dest.Type()) {
@@ -153,6 +113,44 @@ func assignScannedReflectValue(dest reflect.Value, src any) error {
 	}
 
 	return fmt.Errorf("unsupported scan: storing driver.Value type %T into type %s", src, dest.Type())
+}
+
+func assignPointer(dest reflect.Value, src any) error {
+	dest.Set(reflect.New(dest.Type().Elem()))
+	return assignScannedValue(dest.Interface(), src)
+}
+
+func assignDirect(dest reflect.Value, src any, srcValue reflect.Value) bool {
+	if !srcValue.Type().AssignableTo(dest.Type()) {
+		return false
+	}
+
+	if srcBytes, ok := src.([]byte); ok {
+		dest.Set(reflect.ValueOf(cloneBytes(srcBytes)))
+		return true
+	}
+
+	dest.Set(srcValue)
+	return true
+}
+
+func assignByKind(dest reflect.Value, src any) (bool, error) {
+	switch dest.Kind() {
+	case reflect.String:
+		return true, assignString(dest, src)
+	case reflect.Bool:
+		return true, assignBool(dest, src)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true, assignInt(dest, src)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true, assignUint(dest, src)
+	case reflect.Float32, reflect.Float64:
+		return true, assignFloat(dest, src)
+	case reflect.Slice:
+		return true, assignSlice(dest, src)
+	default:
+		return false, nil
+	}
 }
 
 func assignNull(dest reflect.Value) error {
@@ -176,6 +174,42 @@ func assignString(dest reflect.Value, src any) error {
 	default:
 		return fmt.Errorf("unsupported scan: storing driver.Value type %T into type %s", src, dest.Type())
 	}
+}
+
+func assignBool(dest reflect.Value, src any) error {
+	value, err := strconv.ParseBool(asString(src))
+	if err != nil {
+		return conversionError(src, dest.Type(), err)
+	}
+	dest.SetBool(value)
+	return nil
+}
+
+func assignInt(dest reflect.Value, src any) error {
+	value, err := strconv.ParseInt(asString(src), 10, dest.Type().Bits())
+	if err != nil {
+		return conversionError(src, dest.Type(), err)
+	}
+	dest.SetInt(value)
+	return nil
+}
+
+func assignUint(dest reflect.Value, src any) error {
+	value, err := strconv.ParseUint(asString(src), 10, dest.Type().Bits())
+	if err != nil {
+		return conversionError(src, dest.Type(), err)
+	}
+	dest.SetUint(value)
+	return nil
+}
+
+func assignFloat(dest reflect.Value, src any) error {
+	value, err := strconv.ParseFloat(asString(src), dest.Type().Bits())
+	if err != nil {
+		return conversionError(src, dest.Type(), err)
+	}
+	dest.SetFloat(value)
+	return nil
 }
 
 func assignSlice(dest reflect.Value, src any) error {

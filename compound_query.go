@@ -10,47 +10,72 @@ import (
 
 // CompoundQuery represents a set operation such as UNION or UNION ALL.
 type CompoundQuery struct {
+	state *compoundQueryState
+}
+
+type compoundQueryState struct {
 	left          core.QueryExpression
-	operator      string
 	right         core.QueryExpression
+	operator      compoundOperator
 	orderByCl     clauses.OrderByClause
 	limitOffsetCl clauses.LimitOffsetClause
 }
 
-func newCompoundQuery(left core.QueryExpression, operator string, right core.QueryExpression) CompoundQuery {
+type compoundOperator uint8
+
+const (
+	compoundUnion compoundOperator = iota
+	compoundUnionAll
+)
+
+func (o compoundOperator) String() string {
+	switch o {
+	case compoundUnionAll:
+		return "UNION ALL"
+	default:
+		return "UNION"
+	}
+}
+
+func newCompoundQuery(left core.QueryExpression, operator compoundOperator, right core.QueryExpression) CompoundQuery {
 	return CompoundQuery{
-		left:     left,
-		operator: operator,
-		right:    right,
+		state: &compoundQueryState{
+			left:     left,
+			operator: operator,
+			right:    right,
+		},
 	}
 }
 
 // OrderBy appends a final ORDER BY clause to the compound query.
 func (q CompoundQuery) OrderBy(items ...core.Selecter) CompoundQuery {
-	q.orderByCl.Items = append(q.orderByCl.Items, items...)
+	q = q.cloneState()
+	q.state.orderByCl.Items = append(q.state.orderByCl.Items, items...)
 	return q
 }
 
 // Limit sets a final LIMIT clause on the compound query.
 func (q CompoundQuery) Limit(l int) CompoundQuery {
-	q.limitOffsetCl.Limit = l
+	q = q.cloneState()
+	q.state.limitOffsetCl.Limit = l
 	return q
 }
 
 // Offset sets a final OFFSET clause on the compound query.
 func (q CompoundQuery) Offset(o int) CompoundQuery {
-	q.limitOffsetCl.Offset = o
+	q = q.cloneState()
+	q.state.limitOffsetCl.Offset = o
 	return q
 }
 
 // Union combines this query with another query using UNION.
 func (q CompoundQuery) Union(other core.QueryExpression) CompoundQuery {
-	return newCompoundQuery(q, "UNION", other)
+	return newCompoundQuery(q, compoundUnion, other)
 }
 
 // UnionAll combines this query with another query using UNION ALL.
 func (q CompoundQuery) UnionAll(other core.QueryExpression) CompoundQuery {
-	return newCompoundQuery(q, "UNION ALL", other)
+	return newCompoundQuery(q, compoundUnionAll, other)
 }
 
 // CTE wraps the compound query as a common table expression.
@@ -69,7 +94,7 @@ func (q CompoundQuery) RecursiveCTE(name string) CommonTableExpression {
 }
 
 // Render renders the compound query and returns SQL plus bound arguments.
-func (q CompoundQuery) Render(d dialect.Renderer) (string, []any) {
+func (q CompoundQuery) Render(d dialect.Renderer) (sql string, args []any) {
 	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
 
@@ -82,13 +107,14 @@ func (q CompoundQuery) Render(d dialect.Renderer) (string, []any) {
 
 // RenderQueryExpression writes the compound query body.
 func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
-	q.left.RenderSetOperand(w, d)
+	state := q.currentState()
+	state.left.RenderSetOperand(w, d)
 	w.WriteString(" ")
-	w.WriteString(q.operator)
+	w.WriteString(state.operator.String())
 	w.WriteString(" ")
-	q.right.RenderSetOperand(w, d)
-	q.orderByCl.Render(w, d)
-	q.limitOffsetCl.Render(w, d)
+	state.right.RenderSetOperand(w, d)
+	state.orderByCl.Render(w, d)
+	state.limitOffsetCl.Render(w, d)
 }
 
 // RenderSetOperand writes the compound query as a parenthesized set operand.
@@ -100,7 +126,21 @@ func (q CompoundQuery) RenderSetOperand(w *strings.Builder, d dialect.Renderer) 
 
 // CTEs returns common table expressions referenced by the compound query.
 func (q CompoundQuery) CTEs() []*core.CTERef {
-	ctes := q.left.CTEs()
-	ctes = append(ctes, q.right.CTEs()...)
+	state := q.currentState()
+	ctes := state.left.CTEs()
+	ctes = append(ctes, state.right.CTEs()...)
 	return ctes
+}
+
+func (q CompoundQuery) currentState() compoundQueryState {
+	if q.state == nil {
+		return compoundQueryState{}
+	}
+	return *q.state
+}
+
+func (q CompoundQuery) cloneState() CompoundQuery {
+	state := q.currentState()
+	q.state = &state
+	return q
 }

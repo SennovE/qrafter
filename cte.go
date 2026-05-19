@@ -71,12 +71,12 @@ func (cte CommonTableExpression) Render(w *strings.Builder, d dialect.Renderer) 
 
 // Union combines the CTE query with another query using UNION.
 func (cte CommonTableExpression) Union(other core.QueryExpression) CompoundQuery {
-	return newCompoundQuery(cte, "UNION", other)
+	return newCompoundQuery(cte, compoundUnion, other)
 }
 
 // UnionAll combines the CTE query with another query using UNION ALL.
 func (cte CommonTableExpression) UnionAll(other core.QueryExpression) CompoundQuery {
-	return newCompoundQuery(cte, "UNION ALL", other)
+	return newCompoundQuery(cte, compoundUnionAll, other)
 }
 
 // RenderQueryExpression writes the CTE's underlying query expression.

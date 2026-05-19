@@ -30,7 +30,13 @@ func (c WithClause) Render(w *strings.Builder, d dialect.Renderer) {
 
 func (c WithClause) WithClauseFor(q core.QueryExpression) WithClause {
 	seen := make(map[string]struct{}, len(c.CTEs))
+	c.indexExistingCTEs(seen)
+	c.appendCTEs(q.CTEs(), seen)
 
+	return c
+}
+
+func (c *WithClause) indexExistingCTEs(seen map[string]struct{}) {
 	for _, cte := range c.CTEs {
 		if cte == nil {
 			continue
@@ -40,31 +46,29 @@ func (c WithClause) WithClauseFor(q core.QueryExpression) WithClause {
 			c.Recursive = true
 		}
 	}
+}
 
-	for _, cte := range q.CTEs() {
-		if cte == nil {
+func (c *WithClause) appendCTEs(ctes []*core.CTERef, seen map[string]struct{}) {
+	for _, cte := range ctes {
+		if !c.appendCTE(cte, seen) {
 			continue
 		}
-		if cte.Recursive {
-			c.Recursive = true
-		}
-		if _, ok := seen[cte.Name]; !ok {
-			c.CTEs = append(c.CTEs, cte)
-			seen[cte.Name] = struct{}{}
-			for _, cte := range cte.Query.CTEs() {
-				if cte == nil {
-					continue
-				}
-				if cte.Recursive {
-					c.Recursive = true
-				}
-				if _, ok := seen[cte.Name]; !ok {
-					c.CTEs = append(c.CTEs, cte)
-					seen[cte.Name] = struct{}{}
-				}
-			}
-		}
+		c.appendCTEs(cte.Query.CTEs(), seen)
+	}
+}
+
+func (c *WithClause) appendCTE(cte *core.CTERef, seen map[string]struct{}) bool {
+	if cte == nil {
+		return false
+	}
+	if cte.Recursive {
+		c.Recursive = true
+	}
+	if _, ok := seen[cte.Name]; ok {
+		return false
 	}
 
-	return c
+	c.CTEs = append(c.CTEs, cte)
+	seen[cte.Name] = struct{}{}
+	return true
 }

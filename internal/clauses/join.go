@@ -15,9 +15,9 @@ type JoinClause struct {
 	Predicates []core.Predicater
 }
 
-var _ Clauser = JoinClause{}
+var _ Clauser = (*JoinClause)(nil)
 
-func (c JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
+func (c *JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
 	fmt.Fprintf(w, " %s ", c.Type)
 	c.Table.Render(w, d)
 

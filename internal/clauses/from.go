@@ -31,8 +31,8 @@ func (c FromClause) Render(w *strings.Builder, d dialect.Renderer) {
 		core.RenderWithDelimiter(w, d, ", ", tables)
 	}
 
-	for _, join := range joins {
-		join.Render(w, d)
+	for i := range joins {
+		joins[i].Render(w, d)
 	}
 }
 
