@@ -20,13 +20,13 @@ func TestDeleteRender_Basic(t *testing.T) {
 	}{
 		{
 			"Delete all",
-			q.DeleteFrom(UserTable),
+			q.Delete(UserTable),
 			`DELETE FROM "table"`,
 			nil,
 		},
 		{
 			"Where",
-			q.DeleteFrom(UserTable).
+			q.Delete(UserTable).
 				Where(UserTable.UserName.Eq("Alice"), UserTable.Age.Ge("18")),
 			`DELETE FROM "table" WHERE "table"."user_name" = $1 AND "table"."userAge" >= $2`,
 			[]any{"Alice", "18"},
@@ -56,7 +56,7 @@ func TestDeleteRender_WithUsing(t *testing.T) {
 	require.NoError(t, err)
 
 	query := q.
-		DeleteFrom(UserTable).
+		Delete(UserTable).
 		Using(ManagerTable).
 		Where(
 			UserTable.Age.Eq(ManagerTable.Age),
@@ -80,7 +80,7 @@ func TestDeleteRender_AutoUsingFromWhere(t *testing.T) {
 	require.NoError(t, err)
 
 	query := q.
-		DeleteFrom(UserTable).
+		Delete(UserTable).
 		Where(
 			UserTable.Age.Eq(ManagerTable.Age),
 			ManagerTable.UserName.Eq("Bob"),
@@ -106,7 +106,7 @@ func TestDeleteRender_WithCTEUsing(t *testing.T) {
 		WithColumns("user_name")
 
 	query := q.
-		DeleteFrom(UserTable).
+		Delete(UserTable).
 		Using(cte).
 		Where(UserTable.UserName.Eq(cte.Column("user_name")))
 
@@ -126,7 +126,7 @@ func TestDeleteRender_WithQuestionMarkArgs(t *testing.T) {
 	UserTable := q.MustNewTable[User]()
 
 	query := q.
-		DeleteFrom(UserTable).
+		Delete(UserTable).
 		Where(UserTable.UserName.Eq("Alice"))
 
 	sql, args := query.Render(dialect.BaseDialect{})

@@ -49,10 +49,10 @@ func ExampleSelect() {
 	// [18 Alice]
 }
 
-func ExampleInsertInto() {
+func ExampleInsert() {
 	users := q.MustNewTable[exampleUser]()
 
-	sql, args := q.InsertInto(users).
+	sql, args := q.Insert(users).
 		Columns(users.UserName, users.Age).
 		Values("Alice", 18).
 		Returning(users.ID).
@@ -66,10 +66,27 @@ func ExampleInsertInto() {
 	// [Alice 18]
 }
 
-func ExampleDeleteFrom() {
+func ExampleUpdate() {
 	users := q.MustNewTable[exampleUser]()
 
-	sql, args := q.DeleteFrom(users).
+	sql, args := q.Update(users).
+		Set(users.UserName, "Alice").
+		Where(users.ID.Eq(1)).
+		Returning(users.ID, users.UserName).
+		Render(dialect.PostgreSQL{})
+
+	fmt.Println(sql)
+	fmt.Println(args)
+
+	// Output:
+	// UPDATE "users" SET "user_name" = $1 WHERE "users"."id" = $2 RETURNING "users"."id", "users"."user_name"
+	// [Alice 1]
+}
+
+func ExampleDelete() {
+	users := q.MustNewTable[exampleUser]()
+
+	sql, args := q.Delete(users).
 		Where(users.Age.Lt(18)).
 		Returning(users.ID).
 		Render(dialect.PostgreSQL{})

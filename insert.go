@@ -39,11 +39,6 @@ type columnValueKey struct {
 
 // Insert starts an INSERT query for the given table.
 func Insert(table TableConfigProvider) InsertQuery {
-	return InsertInto(table)
-}
-
-// InsertInto starts an INSERT query for the given table.
-func InsertInto(table TableConfigProvider) InsertQuery {
 	return InsertQuery{
 		state: &insertQueryState{
 			table: GetTableRef(table),

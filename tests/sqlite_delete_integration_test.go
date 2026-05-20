@@ -14,7 +14,7 @@ func TestIntegrationSQLiteDelete(t *testing.T) {
 	users := bindSQLiteUsers(t)
 
 	sqlText, args := q.
-		DeleteFrom(users).
+		Delete(users).
 		Where(users.ID.Eq(1)).
 		Render(dialect.BaseDialect{})
 

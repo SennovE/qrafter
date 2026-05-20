@@ -19,7 +19,7 @@ func TestIntegrationSQLiteInsertValuesFrom(t *testing.T) {
 	users.NickName.Set(sql.NullString{String: "C", Valid: true})
 
 	sqlText, args := q.
-		InsertInto(users).
+		Insert(users).
 		ValuesFrom(users).
 		Render(dialect.BaseDialect{})
 
@@ -55,7 +55,7 @@ func TestIntegrationSQLiteInsertValuesRowsFromSlice(t *testing.T) {
 	dave.NickName.Set(sql.NullString{})
 
 	sqlText, args := q.
-		InsertInto(users).
+		Insert(users).
 		ValuesRowsFrom([]sqliteUser{carol, dave}).
 		Render(dialect.BaseDialect{})
 

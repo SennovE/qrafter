@@ -22,11 +22,6 @@ type deleteQueryState struct {
 
 // Delete starts a DELETE query for the given table.
 func Delete(table TableConfigProvider) DeleteQuery {
-	return DeleteFrom(table)
-}
-
-// DeleteFrom starts a DELETE query for the given table.
-func DeleteFrom(table TableConfigProvider) DeleteQuery {
 	return DeleteQuery{
 		state: &deleteQueryState{
 			table: GetTableRef(table),

@@ -19,7 +19,7 @@ func TestInsertRender_Basic(t *testing.T) {
 	}{
 		{
 			"Values",
-			q.InsertInto(UserTable).
+			q.Insert(UserTable).
 				Columns(UserTable.UserName, UserTable.Age).
 				Values("Alice", "18"),
 			`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, $2)`,
@@ -38,7 +38,7 @@ func TestInsertRender_Basic(t *testing.T) {
 		},
 		{
 			"Values rows",
-			q.InsertInto(UserTable).
+			q.Insert(UserTable).
 				Columns(UserTable.UserName, UserTable.Age).
 				ValuesRows([][]any{
 					{"Alice", "18"},
@@ -49,7 +49,7 @@ func TestInsertRender_Basic(t *testing.T) {
 		},
 		{
 			"Set",
-			q.InsertInto(UserTable).
+			q.Insert(UserTable).
 				Set(UserTable.UserName, "Alice").
 				Set(UserTable.Age, q.Default()),
 			`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, DEFAULT)`,
@@ -57,14 +57,14 @@ func TestInsertRender_Basic(t *testing.T) {
 		},
 		{
 			"Default values",
-			q.InsertInto(UserTable).
+			q.Insert(UserTable).
 				DefaultValues(),
 			`INSERT INTO "table" DEFAULT VALUES`,
 			nil,
 		},
 		{
 			"Insert from select",
-			q.InsertInto(UserTable).
+			q.Insert(UserTable).
 				Columns(UserTable.UserName, UserTable.Age).
 				FromSelect(
 					q.Select(UserTable.UserName, UserTable.Age).
@@ -92,7 +92,7 @@ func TestInsertRender_ValuesFrom(t *testing.T) {
 	UserTable.Age.Set("18")
 
 	query := q.
-		InsertInto(UserTable).
+		Insert(UserTable).
 		ValuesFrom(UserTable)
 
 	sql, args := query.Render(dialect.PostgreSQL{})
@@ -106,7 +106,7 @@ func TestInsertRender_ValuesFromWithSelectedColumns(t *testing.T) {
 	UserTable.UserName.Set("Alice")
 
 	query := q.
-		InsertInto(UserTable).
+		Insert(UserTable).
 		Columns(UserTable.UserName).
 		ValuesFrom(UserTable)
 
@@ -126,7 +126,7 @@ func TestInsertRender_ValuesRowsFromSlice(t *testing.T) {
 	second.Age.Set("21")
 
 	query := q.
-		InsertInto(first).
+		Insert(first).
 		ValuesRowsFrom([]User{first, second})
 
 	sql, args := query.Render(dialect.PostgreSQL{})
@@ -151,7 +151,7 @@ func TestInsertRender_ValuesRowsFromPointerSliceWithSelectedColumns(t *testing.T
 	rows := []*User{&first, &second}
 
 	query := q.
-		InsertInto(first).
+		Insert(first).
 		Columns(first.Age, first.UserName).
 		ValuesRowsFrom(&rows)
 
@@ -174,7 +174,7 @@ func TestInsertRender_FromSelectWithCTE(t *testing.T) {
 		WithColumns("user_name", "age")
 
 	query := q.
-		InsertInto(UserTable).
+		Insert(UserTable).
 		Columns(UserTable.UserName, UserTable.Age).
 		FromSelect(q.Select(cte.Column("user_name"), cte.Column("age")))
 
@@ -194,7 +194,7 @@ func TestInsertRender_WithQuestionMarkArgs(t *testing.T) {
 	UserTable := q.MustNewTable[User]()
 
 	query := q.
-		InsertInto(UserTable).
+		Insert(UserTable).
 		Columns(UserTable.UserName).
 		Values("Alice")
 

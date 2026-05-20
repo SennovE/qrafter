@@ -55,6 +55,15 @@
 //   - INSERT ... SELECT through FromSelect.
 //   - RETURNING expressions for dialects that support them.
 //
+// UPDATE queries support:
+//   - SET assignments through Set or SetFrom.
+//   - WHERE predicates with parameterized values.
+//   - FROM tables, including automatic FROM inference from SET values and
+//     WHERE predicates.
+//   - Common table expressions referenced from FROM, assignments, or
+//     predicates.
+//   - RETURNING expressions for dialects that support them.
+//
 // DELETE queries support:
 //   - DELETE FROM a typed table model.
 //   - WHERE predicates with parameterized values.
