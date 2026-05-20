@@ -15,13 +15,11 @@ import (
 )
 
 type sqlxUser struct {
+	q.Table `table:"users"`
+
 	ID       q.Column[int]            `db:"id"`
 	UserName q.Column[string]         `db:"user_name"`
 	NickName q.Column[sql.NullString] `db:"nick_name"`
-}
-
-func (sqlxUser) TableConfig() q.TableConfig {
-	return q.TableConfig{Name: "users"}
 }
 
 func TestSQLXStructScanScansIntoColumns(t *testing.T) {

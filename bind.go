@@ -9,13 +9,14 @@ import (
 )
 
 // NewTable creates a table model and binds its exported Column fields.
+// Table configuration can come from a TableConfig method or an embedded Table
+// field tagged with table:"table_name".
 // Column names come from the field's db tag when present; otherwise the Go
 // field name is converted to snake_case, for example UserName becomes user_name.
 func NewTable[T TableConfigProvider]() (T, error) {
 	var tmp T
-	config := tmp.TableConfig()
-	table, err := bindWithTableRef[T](core.TableRef{Name: config.Name})
-	return table, err
+	config := getTableConfig(tmp)
+	return bindWithTableRef[T](core.TableRef{Name: config.Name})
 }
 
 // MustNewTable is like NewTable but panics if the table cannot be bound.
@@ -36,6 +37,7 @@ func bindWithTableRef[T any](tableRef core.TableRef) (T, error) {
 	if v.Kind() != reflect.Struct {
 		return table, fmt.Errorf("type T must be a struct, got %s", v.Kind())
 	}
+	setEmbeddedTableConfig(v, TableConfig{Name: tableRef.Name})
 	t := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {

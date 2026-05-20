@@ -8,40 +8,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Orders struct {
-	UserID q.Column[int]
-	Amount q.Column[int]
-	Status q.Column[string]
-}
-
-func (Orders) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "orders",
-	}
-}
-
-type Users struct {
-	ID   q.Column[int]
-	Name q.Column[string]
-}
-
-func (Users) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "users",
-	}
-}
-
-type Numbers struct {
-	N q.Column[int] `db:"n"`
-}
-
-func (Numbers) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "numbers",
-	}
-}
-
 func TestSelectRender_WithCTE(t *testing.T) {
+	type Orders struct {
+		q.Table `table:"orders"`
+
+		UserID q.Column[int]
+		Amount q.Column[int]
+		Status q.Column[string]
+	}
+
+	type Users struct {
+		q.Table `table:"users"`
+
+		ID   q.Column[int]
+		Name q.Column[string]
+	}
+
 	UsersTable := q.MustNewTable[Users]()
 	OrdersTable := q.MustNewTable[Orders]()
 
@@ -143,6 +125,12 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 	})
 
 	t.Run("Recursive CTE with union all", func(t *testing.T) {
+		type Numbers struct {
+			q.Table `table:"numbers"`
+
+			N q.Column[int] `db:"n"`
+		}
+
 		NumbersTable := q.MustNewTable[Numbers]()
 
 		cte := q.
@@ -186,30 +174,22 @@ func TestSelectRender_WithMultipleCTEs(t *testing.T) {
 	assert.Empty(t, args)
 }
 
-type Node struct {
-	ID       q.Column[int]
-	ParentID q.Column[int]
-	Value    q.Column[int]
-}
-
-func (Node) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "node",
-	}
-}
-
-type NodeStatus struct {
-	NodeID q.Column[int]
-	Status q.Column[string]
-}
-
-func (NodeStatus) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "node_status",
-	}
-}
-
 func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
+	type Node struct {
+		q.Table `table:"node"`
+
+		ID       q.Column[int]
+		ParentID q.Column[int]
+		Value    q.Column[int]
+	}
+
+	type NodeStatus struct {
+		q.Table `table:"node_status"`
+
+		NodeID q.Column[int]
+		Status q.Column[string]
+	}
+
 	NodeTable := q.MustNewTable[Node]()
 	NodeStatusTable := q.MustNewTable[NodeStatus]()
 

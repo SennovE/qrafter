@@ -10,36 +10,26 @@ import (
 )
 
 type exampleUser struct {
+	q.Table `table:"users"`
+
 	ID       q.Column[int] `db:"id"`
 	UserName q.Column[string]
 	Age      q.Column[int]
 }
 
-func (exampleUser) TableConfig() q.TableConfig {
-	return q.TableConfig{Name: "users"}
-}
-
 type Node struct {
+	q.Table `table:"node"`
+
 	ID       q.Column[int]
 	ParentID q.Column[int]
 	Value    q.Column[int]
 }
 
-func (Node) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "node",
-	}
-}
-
 type NodeStatus struct {
+	q.Table `table:"node_status"`
+
 	NodeID q.Column[int]
 	Status q.Column[string]
-}
-
-func (NodeStatus) TableConfig() q.TableConfig {
-	return q.TableConfig{
-		Name: "node_status",
-	}
 }
 
 func ExampleSelect() {

@@ -27,13 +27,11 @@ import (
 )
 
 type User struct {
+	q.Table `table:"users"`
+
 	ID       q.Column[int] `db:"id"`
 	UserName q.Column[string]
 	Age      q.Column[int]
-}
-
-func (User) TableConfig() q.TableConfig {
-	return q.TableConfig{Name: "users"}
 }
 
 func main() {
@@ -60,6 +58,7 @@ SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 
 ## Features
 
 - Typed table structs with `qrafter.Column[T]`
+- Table configuration via a `TableConfig()` method or embedded `qrafter.Table`
 - Automatic column binding from field names or `db` tags
 - Dialect-aware identifier quoting and placeholders
 - Parameterized `SELECT`, joins, grouping, ordering, limits, and offsets
