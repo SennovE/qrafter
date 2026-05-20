@@ -55,6 +55,13 @@
 //   - INSERT ... SELECT through FromSelect.
 //   - RETURNING expressions for dialects that support them.
 //
+// DELETE queries support:
+//   - DELETE FROM a typed table model.
+//   - WHERE predicates with parameterized values.
+//   - USING tables, including automatic USING inference from WHERE predicates.
+//   - Common table expressions referenced from USING or predicates.
+//   - RETURNING expressions for dialects that support them.
+//
 // Columns can also scan values from database/sql rows, which lets the same
 // struct describe both query construction and result destinations. The scan
 // helpers work with database/sql and are friendly to sqlx struct mapping.

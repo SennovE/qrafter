@@ -66,6 +66,22 @@ func ExampleInsertInto() {
 	// [Alice 18]
 }
 
+func ExampleDeleteFrom() {
+	users := q.MustNewTable[exampleUser]()
+
+	sql, args := q.DeleteFrom(users).
+		Where(users.Age.Lt(18)).
+		Returning(users.ID).
+		Render(dialect.PostgreSQL{})
+
+	fmt.Println(sql)
+	fmt.Println(args)
+
+	// Output:
+	// DELETE FROM "users" WHERE "users"."age" < $1 RETURNING "users"."id"
+	// [18]
+}
+
 func ExampleTableAlias() {
 	users := q.MustNewTable[exampleUser]()
 	managers, err := q.TableAlias(users, "manager")

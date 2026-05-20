@@ -38,10 +38,6 @@ type columnValueKey struct {
 	column string
 }
 
-type cteCollector struct {
-	ctes []*core.CTERef
-}
-
 // Insert starts an INSERT query for the given table.
 func Insert(table TableConfigProvider) InsertQuery {
 	return InsertInto(table)
@@ -274,15 +270,6 @@ func renderInsertRows(w *strings.Builder, d dialect.Renderer, rows [][]core.Sele
 	}
 }
 
-func renderReturning(w *strings.Builder, d dialect.Renderer, returning []core.Selecter) {
-	if len(returning) == 0 {
-		return
-	}
-
-	w.WriteString(" RETURNING ")
-	core.RenderWithDelimiter(w, d, ", ", returning)
-}
-
 func reflectColumnValueRows(rows any) [][]reflectedColumnValue {
 	v := reflect.ValueOf(rows)
 	if !v.IsValid() {
@@ -389,12 +376,4 @@ func columnKey(column ColumnRef) columnValueKey {
 		table:  column.TableRef(),
 		column: column.ColumnName(),
 	}
-}
-
-func (c cteCollector) RenderQueryExpression(_ *strings.Builder, _ dialect.Renderer) {}
-
-func (c cteCollector) RenderSetOperand(_ *strings.Builder, _ dialect.Renderer) {}
-
-func (c cteCollector) CTEs() []*core.CTERef {
-	return c.ctes
 }

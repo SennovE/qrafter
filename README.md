@@ -63,5 +63,6 @@ SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 
 - Dialect-aware identifier quoting and placeholders
 - Parameterized `SELECT`, joins, grouping, ordering, limits, and offsets
 - Parameterized `INSERT` with `VALUES`, `DEFAULT VALUES`, `INSERT ... SELECT`, and `RETURNING`
+- Parameterized `DELETE` with `WHERE`, `USING`, CTEs, and `RETURNING`
 - CTEs, recursive CTEs, compound queries, aggregates, and window functions
 - `database/sql` and `sqlx`-friendly scanning helpers
