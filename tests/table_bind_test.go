@@ -12,6 +12,8 @@ import (
 )
 
 type User struct {
+	qrafter.Table `table:"table"`
+
 	UserName qrafter.Column[string]
 	Age      qrafter.Column[string] `db:"userAge"`
 
@@ -19,17 +21,15 @@ type User struct {
 	meta  string
 }
 
-func (User) TableConfig() qrafter.TableConfig {
-	return qrafter.TableConfig{
-		Name: "table",
-	}
-}
-
-type EmbeddedConfigUser struct {
-	qrafter.Table `table:"embedded_users"`
-
+type ExplicitConfigUser struct {
 	ID   qrafter.Column[int]
 	Name qrafter.Column[string] `db:"full_name"`
+}
+
+func (ExplicitConfigUser) TableConfig() qrafter.TableConfig {
+	return qrafter.TableConfig{
+		Name: "explicit_users",
+	}
 }
 
 func TestTable_NewTable(t *testing.T) {
@@ -48,11 +48,11 @@ func TestTable_NewTable(t *testing.T) {
 		checkRenderedColumn(t, u.TableConfig().Name, "userAge", u.Age)
 	})
 
-	t.Run("NewTable accepts embedded Table", func(t *testing.T) {
-		u, err := qrafter.NewTable[EmbeddedConfigUser]()
+	t.Run("NewTable accepts explicit TableConfig method", func(t *testing.T) {
+		u, err := qrafter.NewTable[ExplicitConfigUser]()
 		require.NoError(t, err, "NewTable should not return an error")
 
-		assert.Equal(t, "embedded_users", u.TableConfig().Name)
+		assert.Equal(t, "explicit_users", u.TableConfig().Name)
 		checkRenderedColumn(t, u.TableConfig().Name, "id", u.ID)
 		checkRenderedColumn(t, u.TableConfig().Name, "full_name", u.Name)
 	})
@@ -72,16 +72,16 @@ func TestTable_MakeAlias(t *testing.T) {
 	})
 }
 
-func TestTable_MakeAliasWithEmbeddedConfig(t *testing.T) {
-	u, err := qrafter.NewTable[EmbeddedConfigUser]()
+func TestTable_MakeAliasWithExplicitConfig(t *testing.T) {
+	u, err := qrafter.NewTable[ExplicitConfigUser]()
 	require.NoError(t, err)
 
-	alias := "embedded_alias"
+	alias := "explicit_alias"
 	aliased, err := qrafter.TableAlias(u, alias)
 	require.NoError(t, err)
 
 	t.Run("Table reference is set with alias", func(t *testing.T) {
-		assert.Equal(t, "embedded_users", aliased.TableConfig().Name)
+		assert.Equal(t, "explicit_users", aliased.TableConfig().Name)
 		checkRenderedColumn(t, alias, "id", aliased.ID)
 		checkRenderedColumn(t, alias, "full_name", aliased.Name)
 	})

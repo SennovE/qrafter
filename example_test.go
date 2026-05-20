@@ -49,6 +49,23 @@ func ExampleSelect() {
 	// [18 Alice]
 }
 
+func ExampleInsertInto() {
+	users := q.MustNewTable[exampleUser]()
+
+	sql, args := q.InsertInto(users).
+		Columns(users.UserName, users.Age).
+		Values("Alice", 18).
+		Returning(users.ID).
+		Render(dialect.PostgreSQL{})
+
+	fmt.Println(sql)
+	fmt.Println(args)
+
+	// Output:
+	// INSERT INTO "users" ("user_name", "age") VALUES ($1, $2) RETURNING "users"."id"
+	// [Alice 18]
+}
+
 func ExampleTableAlias() {
 	users := q.MustNewTable[exampleUser]()
 	managers, err := q.TableAlias(users, "manager")

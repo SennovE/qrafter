@@ -22,9 +22,20 @@ type TableRefer interface {
 	TableRef() core.TableRef
 }
 
+// ColumnRef identifies a concrete SQL column.
+type ColumnRef interface {
+	TableRefer
+	ColumnName() string
+}
+
 // TableRef returns the table reference associated with the column.
 func (c Column[T]) TableRef() core.TableRef {
 	return c.table
+}
+
+// ColumnName returns the SQL column name associated with the column.
+func (c Column[T]) ColumnName() string {
+	return c.name
 }
 
 // Bind attaches the column to a SQL name and table reference.
@@ -44,4 +55,8 @@ func (c Column[T]) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString(d.QuoteIdent(c.table.SQLName()))
 	w.WriteString(".")
 	w.WriteString(d.QuoteIdent(c.name))
+}
+
+func (c Column[T]) insertValue() any {
+	return c.value
 }

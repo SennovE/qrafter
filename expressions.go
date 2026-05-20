@@ -104,6 +104,11 @@ func Param(v any) Expression {
 	return newExpression(expr.Param(v))
 }
 
+// Default returns the SQL DEFAULT keyword for INSERT values.
+func Default() Expression {
+	return newExpression(expr.Default())
+}
+
 // Star returns a '*' expression.
 func Star() Expression {
 	return newExpression(expr.Star())
