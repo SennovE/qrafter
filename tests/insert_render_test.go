@@ -22,7 +22,8 @@ func TestInsertRender_Basic(t *testing.T) {
 			q.Insert(UserTable).
 				Columns(UserTable.UserName, UserTable.Age).
 				Values("Alice", "18"),
-			`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, $2)`,
+			`INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, $2)`,
 			[]any{"Alice", "18"},
 		},
 		{
@@ -32,8 +33,9 @@ func TestInsertRender_Basic(t *testing.T) {
 				Values("Alice", "18").
 				Values("Bob", "21").
 				Returning(UserTable.UserName),
-			`INSERT INTO "table" ("user_name", "userAge") ` +
-				`VALUES ($1, $2), ($3, $4) RETURNING "table"."user_name"`,
+			`INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, $2), ($3, $4)
+RETURNING "table"."user_name"`,
 			[]any{"Alice", "18", "Bob", "21"},
 		},
 		{
@@ -44,7 +46,8 @@ func TestInsertRender_Basic(t *testing.T) {
 					{"Alice", "18"},
 					{"Bob", q.Default()},
 				}),
-			`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, $2), ($3, DEFAULT)`,
+			`INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, $2), ($3, DEFAULT)`,
 			[]any{"Alice", "18", "Bob"},
 		},
 		{
@@ -52,14 +55,16 @@ func TestInsertRender_Basic(t *testing.T) {
 			q.Insert(UserTable).
 				Set(UserTable.UserName, "Alice").
 				Set(UserTable.Age, q.Default()),
-			`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, DEFAULT)`,
+			`INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, DEFAULT)`,
 			[]any{"Alice"},
 		},
 		{
 			"Default values",
 			q.Insert(UserTable).
 				DefaultValues(),
-			`INSERT INTO "table" DEFAULT VALUES`,
+			`INSERT INTO "table"
+DEFAULT VALUES`,
 			nil,
 		},
 		{
@@ -70,9 +75,10 @@ func TestInsertRender_Basic(t *testing.T) {
 					q.Select(UserTable.UserName, UserTable.Age).
 						Where(UserTable.Age.Ge("18")),
 				),
-			`INSERT INTO "table" ("user_name", "userAge") ` +
-				`SELECT "table"."user_name", "table"."userAge" FROM "table" ` +
-				`WHERE "table"."userAge" >= $1`,
+			`INSERT INTO "table" ("user_name", "userAge")
+SELECT "table"."user_name", "table"."userAge"
+FROM "table"
+WHERE "table"."userAge" >= $1`,
 			[]any{"18"},
 		},
 	}
@@ -97,7 +103,8 @@ func TestInsertRender_ValuesFrom(t *testing.T) {
 
 	sql, args := query.Render(dialect.PostgreSQL{})
 
-	assert.Equal(t, `INSERT INTO "table" ("user_name", "userAge") VALUES ($1, $2)`, sql)
+	assert.Equal(t, `INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, $2)`, sql)
 	assert.Equal(t, []any{"Alice", "18"}, args)
 }
 
@@ -112,7 +119,8 @@ func TestInsertRender_ValuesFromWithSelectedColumns(t *testing.T) {
 
 	sql, args := query.Render(dialect.PostgreSQL{})
 
-	assert.Equal(t, `INSERT INTO "table" ("user_name") VALUES ($1)`, sql)
+	assert.Equal(t, `INSERT INTO "table" ("user_name")
+VALUES ($1)`, sql)
 	assert.Equal(t, []any{"Alice"}, args)
 }
 
@@ -133,7 +141,8 @@ func TestInsertRender_ValuesRowsFromSlice(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`INSERT INTO "table" ("user_name", "userAge") VALUES ($1, $2), ($3, $4)`,
+		`INSERT INTO "table" ("user_name", "userAge")
+VALUES ($1, $2), ($3, $4)`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice", "18", "Bob", "21"}, args)
@@ -159,7 +168,8 @@ func TestInsertRender_ValuesRowsFromPointerSliceWithSelectedColumns(t *testing.T
 
 	assert.Equal(
 		t,
-		`INSERT INTO "table" ("userAge", "user_name") VALUES ($1, $2), ($3, $4)`,
+		`INSERT INTO "table" ("userAge", "user_name")
+VALUES ($1, $2), ($3, $4)`,
 		sql,
 	)
 	assert.Equal(t, []any{"18", "Alice", "21", "Bob"}, args)
@@ -182,9 +192,12 @@ func TestInsertRender_FromSelectWithCTE(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`WITH "new_users" ("user_name", "age") AS (SELECT $1, $2) `+
-			`INSERT INTO "table" ("user_name", "userAge") `+
-			`SELECT "new_users"."user_name", "new_users"."age" FROM "new_users"`,
+		`WITH "new_users" ("user_name", "age") AS (
+    SELECT $1, $2
+)
+INSERT INTO "table" ("user_name", "userAge")
+SELECT "new_users"."user_name", "new_users"."age"
+FROM "new_users"`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice", "18"}, args)
@@ -200,6 +213,7 @@ func TestInsertRender_WithQuestionMarkArgs(t *testing.T) {
 
 	sql, args := query.Render(dialect.BaseDialect{})
 
-	assert.Equal(t, `INSERT INTO "table" ("user_name") VALUES (?)`, sql)
+	assert.Equal(t, `INSERT INTO "table" ("user_name")
+VALUES (?)`, sql)
 	assert.Equal(t, []any{"Alice"}, args)
 }

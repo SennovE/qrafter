@@ -24,8 +24,8 @@ func (c WithClause) Render(w *strings.Builder, d dialect.Renderer) {
 		w.WriteString("RECURSIVE ")
 	}
 
-	core.RenderWithDelimiter(w, d, ", ", c.CTEs)
-	w.WriteString(" ")
+	core.RenderWithDelimiter(w, d, ",\n", c.CTEs)
+	w.WriteString("\n")
 }
 
 func (c WithClause) WithClauseFor(q core.QueryExpression) WithClause {

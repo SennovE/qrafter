@@ -22,8 +22,9 @@ func TestSelectRender_WithArgs(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`SELECT "table"."user_name" FROM "table" `+
-			`WHERE "table"."user_name" = $1 AND "table"."userAge" >= $2`,
+		`SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."user_name" = $1 AND "table"."userAge" >= $2`,
 		sql,
 	)
 	assert.Equal(t, []any{`bob' OR TRUE --`, 18}, args)
@@ -37,7 +38,10 @@ func TestCompoundQueryRender_WithArgs(t *testing.T) {
 
 	sql, args := query.Render(dialect.PostgreSQL{})
 
-	assert.Equal(t, `SELECT 1 UNION ALL SELECT $1 LIMIT 1`, sql)
+	assert.Equal(t, `SELECT 1
+UNION ALL
+SELECT $1
+LIMIT 1`, sql)
 	assert.Equal(t, []any{2}, args)
 }
 
@@ -58,11 +62,14 @@ func TestCTERender_WithArgs(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`WITH "adult_users" ("user_name") AS (`+
-			`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" >= $1`+
-			`) `+
-			`SELECT "adult_users"."user_name" FROM "adult_users" `+
-			`WHERE "adult_users"."user_name" = $2`,
+		`WITH "adult_users" ("user_name") AS (
+    SELECT "table"."user_name"
+    FROM "table"
+    WHERE "table"."userAge" >= $1
+)
+SELECT "adult_users"."user_name"
+FROM "adult_users"
+WHERE "adult_users"."user_name" = $2`,
 		sql,
 	)
 	assert.Equal(t, []any{18, "Alice"}, args)
@@ -79,7 +86,9 @@ func TestSelectRender_WithQuestionMarkArgs(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`SELECT "table"."user_name" FROM "table" WHERE "table"."user_name" = ?`,
+		`SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."user_name" = ?`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice"}, args)
@@ -96,7 +105,9 @@ func TestSelectRender_WithArgsKeepsConstantsInline(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`SELECT 1 FROM "table" WHERE "table"."user_name" = $1`,
+		`SELECT 1
+FROM "table"
+WHERE "table"."user_name" = $1`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice"}, args)

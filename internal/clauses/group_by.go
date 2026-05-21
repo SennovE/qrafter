@@ -18,6 +18,6 @@ func (c GroupByClause) Render(w *strings.Builder, d dialect.Renderer) {
 		return
 	}
 
-	w.WriteString(" GROUP BY ")
+	w.WriteString("\nGROUP BY ")
 	core.RenderWithDelimiter(w, d, ", ", c.Columns)
 }

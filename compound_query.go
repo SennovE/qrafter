@@ -109,9 +109,9 @@ func (q CompoundQuery) Render(d dialect.Renderer) (sql string, args []any) {
 func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
 	state := q.currentState()
 	state.left.RenderSetOperand(w, d)
-	w.WriteString(" ")
+	w.WriteString("\n")
 	w.WriteString(state.operator.String())
-	w.WriteString(" ")
+	w.WriteString("\n")
 	state.right.RenderSetOperand(w, d)
 	state.orderByCl.Render(w, d)
 	state.limitOffsetCl.Render(w, d)

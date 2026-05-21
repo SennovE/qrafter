@@ -122,6 +122,6 @@ func renderDeleteUsing(w *strings.Builder, d dialect.Renderer, using []core.Tabl
 		return
 	}
 
-	w.WriteString(" USING ")
+	w.WriteString("\nUSING ")
 	core.RenderWithDelimiter(w, d, ", ", using)
 }

@@ -18,6 +18,6 @@ func (c OrderByClause) Render(w *strings.Builder, d dialect.Renderer) {
 		return
 	}
 
-	w.WriteString(" ORDER BY ")
+	w.WriteString("\nORDER BY ")
 	core.RenderWithDelimiter(w, d, ", ", c.Items)
 }

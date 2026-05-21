@@ -183,12 +183,12 @@ func (q InsertQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
 
 	switch {
 	case state.defaultValues || state.source == nil && len(state.rows) == 0:
-		w.WriteString(" DEFAULT VALUES")
+		w.WriteString("\nDEFAULT VALUES")
 	case state.source != nil:
-		w.WriteString(" ")
+		w.WriteString("\n")
 		state.source.RenderQueryExpression(w, d)
 	default:
-		w.WriteString(" VALUES ")
+		w.WriteString("\nVALUES ")
 		renderInsertRows(w, d, state.rows)
 	}
 

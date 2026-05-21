@@ -50,14 +50,16 @@ func TestSelectRender_WithCTE(t *testing.T) {
 		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
-			`WITH "total_amounts" ("user_id", "total") AS (`+
-				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = $1 `+
-				`GROUP BY "orders"."user_id"`+
-				`) `+
-				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
-				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
-				`WHERE "total_amounts"."total" > $2`,
+			`WITH "total_amounts" ("user_id", "total") AS (
+    SELECT "orders"."user_id", SUM("orders"."amount")
+    FROM "orders"
+    WHERE "orders"."status" = $1
+    GROUP BY "orders"."user_id"
+)
+SELECT "users"."name", "total_amounts"."total"
+FROM "users"
+JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id"
+WHERE "total_amounts"."total" > $2`,
 			str,
 		)
 		assert.Equal(t, []any{"paid", 100}, args)
@@ -72,14 +74,16 @@ func TestSelectRender_WithCTE(t *testing.T) {
 		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
-			`WITH "total_amounts" ("user_id", "total") AS (`+
-				`SELECT "orders"."user_id", SUM("orders"."amount") FROM "orders" `+
-				`WHERE "orders"."status" = $1 `+
-				`GROUP BY "orders"."user_id"`+
-				`) `+
-				`SELECT "users"."name", "total_amounts"."total" FROM "users" `+
-				`JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id" `+
-				`WHERE "total_amounts"."total" > $2`,
+			`WITH "total_amounts" ("user_id", "total") AS (
+    SELECT "orders"."user_id", SUM("orders"."amount")
+    FROM "orders"
+    WHERE "orders"."status" = $1
+    GROUP BY "orders"."user_id"
+)
+SELECT "users"."name", "total_amounts"."total"
+FROM "users"
+JOIN "total_amounts" ON "users"."id" = "total_amounts"."user_id"
+WHERE "total_amounts"."total" > $2`,
 			str,
 		)
 		assert.Equal(t, []any{"paid", 100}, args)
@@ -99,8 +103,11 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
-			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
-				`SELECT "numbers"."n" FROM "numbers"`,
+			`WITH RECURSIVE "numbers" ("n") AS (
+    SELECT 1
+)
+SELECT "numbers"."n"
+FROM "numbers"`,
 			str,
 		)
 		assert.Empty(t, args)
@@ -117,8 +124,11 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
-			`WITH RECURSIVE "numbers" ("n") AS (SELECT 1) `+
-				`SELECT "numbers"."n" FROM "numbers"`,
+			`WITH RECURSIVE "numbers" ("n") AS (
+    SELECT 1
+)
+SELECT "numbers"."n"
+FROM "numbers"`,
 			str,
 		)
 		assert.Empty(t, args)
@@ -147,11 +157,15 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 		str, args := query.Render(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
-			`WITH RECURSIVE "numbers" ("n") AS (`+
-				`SELECT 1 UNION ALL `+
-				`SELECT "numbers"."n" + 1 FROM "numbers" WHERE "numbers"."n" < 3`+
-				`) `+
-				`SELECT "numbers"."n" FROM "numbers"`,
+			`WITH RECURSIVE "numbers" ("n") AS (
+    SELECT 1
+    UNION ALL
+    SELECT "numbers"."n" + 1
+    FROM "numbers"
+    WHERE "numbers"."n" < 3
+)
+SELECT "numbers"."n"
+FROM "numbers"`,
 			str,
 		)
 		assert.Empty(t, args)
@@ -166,9 +180,16 @@ func TestSelectRender_WithMultipleCTEs(t *testing.T) {
 	str, args := query.Render(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
-		`WITH "cte1" ("c1") AS (SELECT 1), `+
-			`"cte2" ("c1") AS (SELECT "cte1"."c1" FROM "cte1") `+
-			`SELECT "cte1"."c1", "cte2"."c1" FROM "cte1" CROSS JOIN "cte2"`,
+		`WITH "cte1" ("c1") AS (
+    SELECT 1
+),
+"cte2" ("c1") AS (
+    SELECT "cte1"."c1"
+    FROM "cte1"
+)
+SELECT "cte1"."c1", "cte2"."c1"
+FROM "cte1"
+CROSS JOIN "cte2"`,
 		str,
 	)
 	assert.Empty(t, args)
@@ -217,20 +238,20 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 	str, args := query.Render(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
-		`WITH RECURSIVE "nodes" AS (`+
-			`SELECT "node"."id", "node"."parent_id", 1 AS "level" `+
-			`FROM "node" `+
-			`JOIN "node_status" ON "node"."id" = "node_status"."node_id" `+
-			`WHERE "node_status"."status" = 'active' `+
-			`UNION ALL `+
-			`(`+
-			`SELECT "node"."id", "node"."parent_id", "nodes"."level" + 1 AS "level" `+
-			`FROM "node" `+
-			`JOIN "nodes" ON "node"."parent_id" = "nodes"."id" `+
-			`LIMIT 1`+
-			`)`+
-			`) `+
-			`SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level" FROM "nodes" ORDER BY "nodes"."level"`,
+		`WITH RECURSIVE "nodes" AS (
+    SELECT "node"."id", "node"."parent_id", 1 AS "level"
+    FROM "node"
+    JOIN "node_status" ON "node"."id" = "node_status"."node_id"
+    WHERE "node_status"."status" = 'active'
+    UNION ALL
+    (SELECT "node"."id", "node"."parent_id", "nodes"."level" + 1 AS "level"
+    FROM "node"
+    JOIN "nodes" ON "node"."parent_id" = "nodes"."id"
+    LIMIT 1)
+)
+SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level"
+FROM "nodes"
+ORDER BY "nodes"."level"`,
 		str,
 	)
 	assert.Empty(t, args)

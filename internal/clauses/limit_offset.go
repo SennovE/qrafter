@@ -17,6 +17,6 @@ func (c LimitOffsetClause) Render(w *strings.Builder, d dialect.Renderer) {
 	if rendered == "" {
 		return
 	}
-	w.WriteString(" ")
+	w.WriteString("\n")
 	w.WriteString(rendered)
 }

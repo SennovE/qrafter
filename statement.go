@@ -39,7 +39,7 @@ func renderReturning(w *strings.Builder, d dialect.Renderer, returning []core.Se
 		return
 	}
 
-	w.WriteString(" RETURNING ")
+	w.WriteString("\nRETURNING ")
 	core.RenderWithDelimiter(w, d, ", ", returning)
 }
 

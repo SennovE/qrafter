@@ -30,14 +30,16 @@ func TestSelectRender_Basic(t *testing.T) {
 						),
 					),
 				),
-			`SELECT "table"."user_name" FROM "table" ` +
-				`WHERE "table"."user_name" = $1 AND ("table"."userAge" >= $2 OR $3 = "table"."user_name")`,
+			`SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."user_name" = $1 AND ("table"."userAge" >= $2 OR $3 = "table"."user_name")`,
 			[]any{"ABC", "1", "Test"},
 		},
 		{
 			"Lower priority is indicated in brackets for math expressions",
 			q.Select(UserTable.Age.Add(q.Literal(1)).Mul(q.Literal(2))),
-			`SELECT ("table"."userAge" + 1) * 2 FROM "table"`,
+			`SELECT ("table"."userAge" + 1) * 2
+FROM "table"`,
 			nil,
 		},
 		{
@@ -51,9 +53,10 @@ func TestSelectRender_Basic(t *testing.T) {
 			q.Select(UserTable.UserName, UserTable.Age.Add(1)).
 				GroupBy(UserTable.UserName).
 				Limit(10),
-			`SELECT "table"."user_name", "table"."userAge" + $1 FROM "table" ` +
-				`GROUP BY "table"."user_name" ` +
-				`LIMIT 10`,
+			`SELECT "table"."user_name", "table"."userAge" + $1
+FROM "table"
+GROUP BY "table"."user_name"
+LIMIT 10`,
 			[]any{1},
 		},
 		{
@@ -64,10 +67,9 @@ func TestSelectRender_Basic(t *testing.T) {
 			).Where(
 				q.Func("LOWER", UserTable.UserName).Eq("bob"),
 			),
-			`SELECT ` +
-				`LOWER("table"."user_name") AS "lower_name", ` +
-				`COALESCE("table"."userAge", '0') FROM "table" ` +
-				`WHERE LOWER("table"."user_name") = $1`,
+			`SELECT LOWER("table"."user_name") AS "lower_name", COALESCE("table"."userAge", '0')
+FROM "table"
+WHERE LOWER("table"."user_name") = $1`,
 			[]any{"bob"},
 		},
 		{
@@ -83,14 +85,11 @@ func TestSelectRender_Basic(t *testing.T) {
 				q.Count().Gt(1),
 				q.Max(UserTable.Age).Ge("18"),
 			).Limit(10),
-			`SELECT ` +
-				`"table"."user_name", ` +
-				`COUNT(*) AS "users_count", ` +
-				`COUNT(DISTINCT "table"."userAge") AS "distinct_ages", ` +
-				`MAX("table"."userAge") AS "max_age" FROM "table" ` +
-				`GROUP BY "table"."user_name" ` +
-				`HAVING COUNT(*) > $1 AND MAX("table"."userAge") >= $2 ` +
-				`LIMIT 10`,
+			`SELECT "table"."user_name", COUNT(*) AS "users_count", COUNT(DISTINCT "table"."userAge") AS "distinct_ages", MAX("table"."userAge") AS "max_age"
+FROM "table"
+GROUP BY "table"."user_name"
+HAVING COUNT(*) > $1 AND MAX("table"."userAge") >= $2
+LIMIT 10`,
 			[]any{1, "18"},
 		},
 		{
@@ -102,9 +101,10 @@ func TestSelectRender_Basic(t *testing.T) {
 				).
 				Limit(10).
 				Offset(10),
-			`SELECT "table"."user_name" FROM "table" ` +
-				`ORDER BY "table"."user_name" ASC, "table"."userAge" DESC NULLS LAST ` +
-				`LIMIT 10 OFFSET 10`,
+			`SELECT "table"."user_name"
+FROM "table"
+ORDER BY "table"."user_name" ASC, "table"."userAge" DESC NULLS LAST
+LIMIT 10 OFFSET 10`,
 			nil,
 		},
 		{
@@ -113,10 +113,11 @@ func TestSelectRender_Basic(t *testing.T) {
 				GroupBy(UserTable.UserName).
 				Having(q.Count().Gt(q.Literal(1))).
 				OrderBy(q.Count().Desc()),
-			`SELECT "table"."user_name", COUNT(*) AS "users_count" FROM "table" ` +
-				`GROUP BY "table"."user_name" ` +
-				`HAVING COUNT(*) > 1 ` +
-				`ORDER BY COUNT(*) DESC`,
+			`SELECT "table"."user_name", COUNT(*) AS "users_count"
+FROM "table"
+GROUP BY "table"."user_name"
+HAVING COUNT(*) > 1
+ORDER BY COUNT(*) DESC`,
 			nil,
 		},
 	}
@@ -147,17 +148,19 @@ func TestSelectRender_WithJoin(t *testing.T) {
 			q.Select(UserTable.UserName, ManagerTable.UserName).
 				Join(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)).
 				Where(ManagerTable.UserName.Eq("Bob")),
-			`SELECT "table"."user_name", "manager"."user_name" FROM "table" ` +
-				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
-				`WHERE "manager"."user_name" = $1`,
+			`SELECT "table"."user_name", "manager"."user_name"
+FROM "table"
+JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"
+WHERE "manager"."user_name" = $1`,
 			[]any{"Bob"},
 		},
 		{
 			"Left Join",
 			q.Select(UserTable.UserName).
 				LeftJoin(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)),
-			`SELECT "table"."user_name" FROM "table" ` +
-				`LEFT JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"`,
+			`SELECT "table"."user_name"
+FROM "table"
+LEFT JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"`,
 			nil,
 		},
 		{
@@ -165,9 +168,10 @@ func TestSelectRender_WithJoin(t *testing.T) {
 			q.Select(ManagerTable.UserName).
 				Join(ManagerTable, UserTable.Age.Eq(ManagerTable.Age)).
 				GroupBy(ManagerTable.UserName),
-			`SELECT "manager"."user_name" FROM "table" ` +
-				`JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge" ` +
-				`GROUP BY "manager"."user_name"`,
+			`SELECT "manager"."user_name"
+FROM "table"
+JOIN "table" AS "manager" ON "table"."userAge" = "manager"."userAge"
+GROUP BY "manager"."user_name"`,
 			nil,
 		},
 	}
@@ -194,7 +198,9 @@ func TestSelectRender_WithUnion(t *testing.T) {
 			"Union",
 			q.Select(q.Literal(1)).
 				Union(q.Select(q.Literal(2))),
-			`SELECT 1 UNION SELECT 2`,
+			`SELECT 1
+UNION
+SELECT 2`,
 			nil,
 		},
 		{
@@ -205,9 +211,13 @@ func TestSelectRender_WithUnion(t *testing.T) {
 					q.Select(UserTable.UserName).
 						Where(UserTable.Age.Ge(65)),
 				),
-			`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" < $1 ` +
-				`UNION ALL ` +
-				`SELECT "table"."user_name" FROM "table" WHERE "table"."userAge" >= $2`,
+			`SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."userAge" < $1
+UNION ALL
+SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."userAge" >= $2`,
 			[]any{18, 65},
 		},
 		{
@@ -215,7 +225,10 @@ func TestSelectRender_WithUnion(t *testing.T) {
 			q.Select(q.Literal(1)).
 				UnionAll(q.Select(q.Literal(2))).
 				Limit(1),
-			`SELECT 1 UNION ALL SELECT 2 LIMIT 1`,
+			`SELECT 1
+UNION ALL
+SELECT 2
+LIMIT 1`,
 			nil,
 		},
 		{
@@ -225,7 +238,10 @@ func TestSelectRender_WithUnion(t *testing.T) {
 					q.Select(q.Literal(2)).
 						Limit(1),
 				),
-			`SELECT 1 UNION ALL (SELECT 2 LIMIT 1)`,
+			`SELECT 1
+UNION ALL
+(SELECT 2
+LIMIT 1)`,
 			nil,
 		},
 		{
@@ -234,7 +250,11 @@ func TestSelectRender_WithUnion(t *testing.T) {
 				Limit(1).
 				UnionAll(q.Select(q.Literal(2))).
 				Limit(10),
-			`(SELECT 1 LIMIT 1) UNION ALL SELECT 2 LIMIT 10`,
+			`(SELECT 1
+LIMIT 1)
+UNION ALL
+SELECT 2
+LIMIT 10`,
 			nil,
 		},
 		{
@@ -244,7 +264,13 @@ func TestSelectRender_WithUnion(t *testing.T) {
 				Limit(1).
 				UnionAll(q.Select(q.Literal(3))).
 				Limit(10),
-			`(SELECT 1 UNION SELECT 2 LIMIT 1) UNION ALL SELECT 3 LIMIT 10`,
+			`(SELECT 1
+UNION
+SELECT 2
+LIMIT 1)
+UNION ALL
+SELECT 3
+LIMIT 10`,
 			nil,
 		},
 	}
@@ -277,9 +303,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					).
 					As("rn"),
 			),
-			`SELECT "table"."user_name", ` +
-				`ROW_NUMBER() OVER (PARTITION BY "table"."userAge" ORDER BY "table"."user_name" ASC) AS "rn" ` +
-				`FROM "table"`,
+			`SELECT "table"."user_name", ROW_NUMBER() OVER (PARTITION BY "table"."userAge" ORDER BY "table"."user_name" ASC) AS "rn"
+FROM "table"`,
 		},
 		{
 			"Aggregate window",
@@ -287,8 +312,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 				UserTable.UserName,
 				q.Count().Over(q.PartitionBy(UserTable.Age)).As("age_count"),
 			),
-			`SELECT "table"."user_name", COUNT(*) OVER (PARTITION BY "table"."userAge") AS "age_count" ` +
-				`FROM "table"`,
+			`SELECT "table"."user_name", COUNT(*) OVER (PARTITION BY "table"."userAge") AS "age_count"
+FROM "table"`,
 		},
 		{
 			"Window order contributes source table",
@@ -297,7 +322,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					Over(q.Window().OrderBy(UserTable.Age.Desc())).
 					As("rn"),
 			),
-			`SELECT ROW_NUMBER() OVER (ORDER BY "table"."userAge" DESC) AS "rn" FROM "table"`,
+			`SELECT ROW_NUMBER() OVER (ORDER BY "table"."userAge" DESC) AS "rn"
+FROM "table"`,
 		},
 		{
 			"Empty over clause",
@@ -315,10 +341,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					).
 					As("running_age"),
 			),
-			`SELECT "table"."user_name", ` +
-				`SUM("table"."userAge") OVER (` +
-				`ORDER BY "table"."user_name" ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` +
-				`) AS "running_age" FROM "table"`,
+			`SELECT "table"."user_name", SUM("table"."userAge") OVER (ORDER BY "table"."user_name" ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS "running_age"
+FROM "table"`,
 		},
 		{
 			"Window frame single bound",
@@ -330,7 +354,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					).
 					As("nearby_count"),
 			),
-			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS 1 PRECEDING) AS "nearby_count" FROM "table"`,
+			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS 1 PRECEDING) AS "nearby_count"
+FROM "table"`,
 		},
 		{
 			"Window frame string offset",
@@ -342,9 +367,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					).
 					As("daily_count"),
 			),
-			`SELECT COUNT(*) OVER (` +
-				`ORDER BY "table"."user_name" ASC RANGE BETWEEN INTERVAL '1 day' PRECEDING AND CURRENT ROW` +
-				`) AS "daily_count" FROM "table"`,
+			`SELECT COUNT(*) OVER (ORDER BY "table"."user_name" ASC RANGE BETWEEN INTERVAL '1 day' PRECEDING AND CURRENT ROW) AS "daily_count"
+FROM "table"`,
 		},
 		{
 			"Window frame custom bound",
@@ -356,7 +380,8 @@ func TestSelectRender_WithWindowFunctions(t *testing.T) {
 					).
 					As("current_count"),
 			),
-			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS CURRENT ROW) AS "current_count" FROM "table"`,
+			`SELECT COUNT(*) OVER (ORDER BY "table"."userAge" ASC ROWS CURRENT ROW) AS "current_count"
+FROM "table"`,
 		},
 	}
 

@@ -19,7 +19,7 @@ func (c HavingClause) Render(w *strings.Builder, d dialect.Renderer) {
 		return
 	}
 
-	w.WriteString(" HAVING ")
+	w.WriteString("\nHAVING ")
 	if len(c.Predicates) == 1 {
 		c.Predicates[0].Render(w, d)
 		return

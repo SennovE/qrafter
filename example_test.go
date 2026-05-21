@@ -45,7 +45,11 @@ func ExampleSelect() {
 	fmt.Println(args)
 
 	// Output:
-	// SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 AND "users"."user_name" = $2 ORDER BY "users"."id" ASC LIMIT 10
+	// SELECT "users"."id", "users"."user_name"
+	// FROM "users"
+	// WHERE "users"."age" >= $1 AND "users"."user_name" = $2
+	// ORDER BY "users"."id" ASC
+	// LIMIT 10
 	// [18 Alice]
 }
 
@@ -62,7 +66,9 @@ func ExampleInsert() {
 	fmt.Println(args)
 
 	// Output:
-	// INSERT INTO "users" ("user_name", "age") VALUES ($1, $2) RETURNING "users"."id"
+	// INSERT INTO "users" ("user_name", "age")
+	// VALUES ($1, $2)
+	// RETURNING "users"."id"
 	// [Alice 18]
 }
 
@@ -79,7 +85,10 @@ func ExampleUpdate() {
 	fmt.Println(args)
 
 	// Output:
-	// UPDATE "users" SET "user_name" = $1 WHERE "users"."id" = $2 RETURNING "users"."id", "users"."user_name"
+	// UPDATE "users"
+	// SET "user_name" = $1
+	// WHERE "users"."id" = $2
+	// RETURNING "users"."id", "users"."user_name"
 	// [Alice 1]
 }
 
@@ -95,7 +104,9 @@ func ExampleDelete() {
 	fmt.Println(args)
 
 	// Output:
-	// DELETE FROM "users" WHERE "users"."age" < $1 RETURNING "users"."id"
+	// DELETE FROM "users"
+	// WHERE "users"."age" < $1
+	// RETURNING "users"."id"
 	// [18]
 }
 
@@ -113,7 +124,9 @@ func ExampleTableAlias() {
 	fmt.Println(sql)
 
 	// Output:
-	// SELECT "users"."user_name", "manager"."user_name" FROM "users" JOIN "users" AS "manager" ON "users"."age" = "manager"."age"
+	// SELECT "users"."user_name", "manager"."user_name"
+	// FROM "users"
+	// JOIN "users" AS "manager" ON "users"."age" = "manager"."age"
 }
 
 func ExampleScanDest() {
@@ -155,7 +168,11 @@ func ExampleSelectQuery_CTEs() {
 	sql, _ := query.Render(dialect.PostgreSQL{})
 	fmt.Println(sql)
 	// Output:
-	// WITH "cte1" ("c1") AS (SELECT 1) SELECT "cte1"."c1" FROM "cte1"
+	// WITH "cte1" ("c1") AS (
+	//     SELECT 1
+	// )
+	// SELECT "cte1"."c1"
+	// FROM "cte1"
 }
 
 func ExampleSelectQuery_CTEs_complex_recursive_query() {
@@ -186,5 +203,18 @@ func ExampleSelectQuery_CTEs_complex_recursive_query() {
 	sql, _ := query.Render(dialect.PostgreSQL{})
 	fmt.Println(sql)
 	// Output:
-	// WITH RECURSIVE "nodes" AS (SELECT "node"."id", "node"."parent_id", 1 AS "level" FROM "node" JOIN "node_status" ON "node"."id" = "node_status"."node_id" WHERE "node_status"."status" = 'active' UNION ALL (SELECT "node"."id", "node"."parent_id", "nodes"."level" + 1 AS "level" FROM "node" JOIN "nodes" ON "node"."parent_id" = "nodes"."id" LIMIT 1)) SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level" FROM "nodes" ORDER BY "nodes"."level"
+	// WITH RECURSIVE "nodes" AS (
+	//     SELECT "node"."id", "node"."parent_id", 1 AS "level"
+	//     FROM "node"
+	//     JOIN "node_status" ON "node"."id" = "node_status"."node_id"
+	//     WHERE "node_status"."status" = 'active'
+	//     UNION ALL
+	//     (SELECT "node"."id", "node"."parent_id", "nodes"."level" + 1 AS "level"
+	//     FROM "node"
+	//     JOIN "nodes" ON "node"."parent_id" = "nodes"."id"
+	//     LIMIT 1)
+	// )
+	// SELECT "nodes"."id", "nodes"."parent_id", "nodes"."level"
+	// FROM "nodes"
+	// ORDER BY "nodes"."level"
 }

@@ -19,7 +19,7 @@ func (c WhereClause) Render(w *strings.Builder, d dialect.Renderer) {
 		return
 	}
 
-	w.WriteString(" WHERE ")
+	w.WriteString("\nWHERE ")
 	if len(c.Predicates) == 1 {
 		c.Predicates[0].Render(w, d)
 		return

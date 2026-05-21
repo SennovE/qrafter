@@ -18,7 +18,7 @@ type JoinClause struct {
 var _ Clauser = (*JoinClause)(nil)
 
 func (c *JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
-	fmt.Fprintf(w, " %s ", c.Type)
+	fmt.Fprintf(w, "\n%s ", c.Type)
 	c.Table.Render(w, d)
 
 	if len(c.Predicates) == 0 {

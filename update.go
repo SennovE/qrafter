@@ -161,7 +161,7 @@ func (s *updateQueryState) addFromTables(tables []core.TableRef) {
 }
 
 func renderUpdateAssignments(w *strings.Builder, d dialect.Renderer, assignments []updateAssignment) {
-	w.WriteString(" SET ")
+	w.WriteString("\nSET ")
 	for i, assignment := range assignments {
 		if i > 0 {
 			w.WriteString(", ")
@@ -177,7 +177,7 @@ func renderUpdateFrom(w *strings.Builder, d dialect.Renderer, from []core.TableR
 		return
 	}
 
-	w.WriteString(" FROM ")
+	w.WriteString("\nFROM ")
 	core.RenderWithDelimiter(w, d, ", ", from)
 }
 

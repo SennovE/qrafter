@@ -26,10 +26,14 @@
 //		Limit(10).
 //		Render(dialect.PostgreSQL{})
 //
-// The rendered SQL uses dialect-specific identifier quoting and placeholders.
-// For PostgreSQL, the example above renders:
+// The rendered SQL uses dialect-specific identifier quoting, placeholders, and
+// clause-level line breaks. For PostgreSQL, the example above renders:
 //
-//	SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 AND "users"."user_name" = $2 ORDER BY "users"."id" ASC LIMIT 10
+//	SELECT "users"."id", "users"."user_name"
+//	FROM "users"
+//	WHERE "users"."age" >= $1 AND "users"."user_name" = $2
+//	ORDER BY "users"."id" ASC
+//	LIMIT 10
 //
 // and returns []any{18, "Alice"} as driver arguments.
 //

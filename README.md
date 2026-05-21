@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/SennovE/qrafter.svg)](https://pkg.go.dev/github.com/SennovE/qrafter)
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
 
-Qrafter forges dialect-aware SQL queries directly from typed Go structs.
+qrafter is a small type-safe SQL query builder for Go.
 
 It is a query builder for people who want to keep writing SQL-shaped Go
 code. Table structs define the available columns, queries compose from those
@@ -61,7 +61,11 @@ func main() {
 Output:
 
 ```text
-SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 AND "users"."user_name" = $2 ORDER BY "users"."id" ASC LIMIT 10
+SELECT "users"."id", "users"."user_name"
+FROM "users"
+WHERE "users"."age" >= $1 AND "users"."user_name" = $2
+ORDER BY "users"."id" ASC
+LIMIT 10
 [18 Alice]
 ```
 
@@ -80,6 +84,7 @@ database schema.
 - Table configuration via a `TableConfig()` method or embedded `qrafter.Table`
 - Automatic column binding from field names or `db` tags
 - Dialect-aware identifier quoting and placeholders
+- Human-readable multiline SQL rendering
 - Parameterized `SELECT`, joins, grouping, ordering, limits, and offsets
 - Parameterized `INSERT` with `VALUES`, `DEFAULT VALUES`, `INSERT ... SELECT`, and `RETURNING`
 - Parameterized `UPDATE` with `SET`, `FROM`, `WHERE`, CTEs, and `RETURNING`

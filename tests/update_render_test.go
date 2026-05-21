@@ -23,7 +23,9 @@ func TestUpdateRender_Basic(t *testing.T) {
 			q.Update(UserTable).
 				Set(UserTable.UserName, "Alice").
 				Where(UserTable.Age.Ge("18")),
-			`UPDATE "table" SET "user_name" = $1 WHERE "table"."userAge" >= $2`,
+			`UPDATE "table"
+SET "user_name" = $1
+WHERE "table"."userAge" >= $2`,
 			[]any{"Alice", "18"},
 		},
 		{
@@ -33,9 +35,10 @@ func TestUpdateRender_Basic(t *testing.T) {
 				Set(UserTable.Age, "18").
 				Where(UserTable.UserName.Eq("old")).
 				Returning(UserTable.UserName, UserTable.Age),
-			`UPDATE "table" SET "user_name" = $1, "userAge" = $2 ` +
-				`WHERE "table"."user_name" = $3 ` +
-				`RETURNING "table"."user_name", "table"."userAge"`,
+			`UPDATE "table"
+SET "user_name" = $1, "userAge" = $2
+WHERE "table"."user_name" = $3
+RETURNING "table"."user_name", "table"."userAge"`,
 			[]any{"Alice", "18", "old"},
 		},
 		{
@@ -43,7 +46,9 @@ func TestUpdateRender_Basic(t *testing.T) {
 			q.Update(UserTable).
 				Set(UserTable.Age, q.Default()).
 				Where(UserTable.UserName.Eq("Alice")),
-			`UPDATE "table" SET "userAge" = DEFAULT WHERE "table"."user_name" = $1`,
+			`UPDATE "table"
+SET "userAge" = DEFAULT
+WHERE "table"."user_name" = $1`,
 			[]any{"Alice"},
 		},
 	}
@@ -71,7 +76,9 @@ func TestUpdateRender_SetFrom(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`UPDATE "table" SET "user_name" = $1, "userAge" = $2 WHERE "table"."user_name" = $3`,
+		`UPDATE "table"
+SET "user_name" = $1, "userAge" = $2
+WHERE "table"."user_name" = $3`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice", "18", "old"}, args)
@@ -92,8 +99,10 @@ func TestUpdateRender_WithFrom(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`UPDATE "table" SET "userAge" = "manager"."userAge" `+
-			`FROM "table" AS "manager" WHERE "manager"."user_name" = $1`,
+		`UPDATE "table"
+SET "userAge" = "manager"."userAge"
+FROM "table" AS "manager"
+WHERE "manager"."user_name" = $1`,
 		sql,
 	)
 	assert.Equal(t, []any{"Bob"}, args)
@@ -113,8 +122,10 @@ func TestUpdateRender_AutoFromFromSetAndWhere(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`UPDATE "table" SET "userAge" = "manager"."userAge" `+
-			`FROM "table" AS "manager" WHERE "table"."user_name" = "manager"."user_name"`,
+		`UPDATE "table"
+SET "userAge" = "manager"."userAge"
+FROM "table" AS "manager"
+WHERE "table"."user_name" = "manager"."user_name"`,
 		sql,
 	)
 	assert.Empty(t, args)
@@ -138,9 +149,13 @@ func TestUpdateRender_WithCTEFrom(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`WITH "source_users" ("user_name", "age") AS (SELECT $1, $2) `+
-			`UPDATE "table" SET "userAge" = "source_users"."age" FROM "source_users" `+
-			`WHERE "table"."user_name" = "source_users"."user_name"`,
+		`WITH "source_users" ("user_name", "age") AS (
+    SELECT $1, $2
+)
+UPDATE "table"
+SET "userAge" = "source_users"."age"
+FROM "source_users"
+WHERE "table"."user_name" = "source_users"."user_name"`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice", "18"}, args)
@@ -156,6 +171,10 @@ func TestUpdateRender_WithQuestionMarkArgs(t *testing.T) {
 
 	sql, args := query.Render(dialect.BaseDialect{})
 
-	assert.Equal(t, `UPDATE "table" SET "user_name" = ? WHERE "table"."userAge" >= ?`, sql)
+	assert.Equal(t, `UPDATE "table"
+SET "user_name" = ?
+WHERE "table"."userAge" >= ?`,
+		sql,
+	)
 	assert.Equal(t, []any{"Alice", "18"}, args)
 }

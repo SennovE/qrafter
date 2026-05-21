@@ -20,7 +20,7 @@ func (c FromClause) Render(w *strings.Builder, d dialect.Renderer) {
 		return
 	}
 
-	w.WriteString(" FROM ")
+	w.WriteString("\nFROM ")
 
 	tables := core.GetSortedTables(c.Tables)
 	joins := c.Joins

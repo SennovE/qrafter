@@ -28,7 +28,8 @@ func TestDeleteRender_Basic(t *testing.T) {
 			"Where",
 			q.Delete(UserTable).
 				Where(UserTable.UserName.Eq("Alice"), UserTable.Age.Ge("18")),
-			`DELETE FROM "table" WHERE "table"."user_name" = $1 AND "table"."userAge" >= $2`,
+			`DELETE FROM "table"
+WHERE "table"."user_name" = $1 AND "table"."userAge" >= $2`,
 			[]any{"Alice", "18"},
 		},
 		{
@@ -36,7 +37,9 @@ func TestDeleteRender_Basic(t *testing.T) {
 			q.Delete(UserTable).
 				Where(UserTable.UserName.Eq("Alice")).
 				Returning(UserTable.UserName),
-			`DELETE FROM "table" WHERE "table"."user_name" = $1 RETURNING "table"."user_name"`,
+			`DELETE FROM "table"
+WHERE "table"."user_name" = $1
+RETURNING "table"."user_name"`,
 			[]any{"Alice"},
 		},
 	}
@@ -67,8 +70,9 @@ func TestDeleteRender_WithUsing(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`DELETE FROM "table" USING "table" AS "manager" `+
-			`WHERE "table"."userAge" = "manager"."userAge" AND "manager"."user_name" = $1`,
+		`DELETE FROM "table"
+USING "table" AS "manager"
+WHERE "table"."userAge" = "manager"."userAge" AND "manager"."user_name" = $1`,
 		sql,
 	)
 	assert.Equal(t, []any{"Bob"}, args)
@@ -90,8 +94,9 @@ func TestDeleteRender_AutoUsingFromWhere(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`DELETE FROM "table" USING "table" AS "manager" `+
-			`WHERE "table"."userAge" = "manager"."userAge" AND "manager"."user_name" = $1`,
+		`DELETE FROM "table"
+USING "table" AS "manager"
+WHERE "table"."userAge" = "manager"."userAge" AND "manager"."user_name" = $1`,
 		sql,
 	)
 	assert.Equal(t, []any{"Bob"}, args)
@@ -114,9 +119,12 @@ func TestDeleteRender_WithCTEUsing(t *testing.T) {
 
 	assert.Equal(
 		t,
-		`WITH "doomed_users" ("user_name") AS (SELECT $1) `+
-			`DELETE FROM "table" USING "doomed_users" `+
-			`WHERE "table"."user_name" = "doomed_users"."user_name"`,
+		`WITH "doomed_users" ("user_name") AS (
+    SELECT $1
+)
+DELETE FROM "table"
+USING "doomed_users"
+WHERE "table"."user_name" = "doomed_users"."user_name"`,
 		sql,
 	)
 	assert.Equal(t, []any{"Alice"}, args)
@@ -131,6 +139,7 @@ func TestDeleteRender_WithQuestionMarkArgs(t *testing.T) {
 
 	sql, args := query.Render(dialect.BaseDialect{})
 
-	assert.Equal(t, `DELETE FROM "table" WHERE "table"."user_name" = ?`, sql)
+	assert.Equal(t, `DELETE FROM "table"
+WHERE "table"."user_name" = ?`, sql)
 	assert.Equal(t, []any{"Alice"}, args)
 }

@@ -64,9 +64,25 @@ func (cte *CTERef) Render(w *strings.Builder, d dialect.Renderer) {
 		w.WriteString(")")
 	}
 
-	w.WriteString(" AS (")
-	cte.Query.RenderQueryExpression(w, d)
-	w.WriteString(")")
+	var body strings.Builder
+	cte.Query.RenderQueryExpression(&body, d)
+
+	w.WriteString(" AS (\n")
+	writeIndentedLines(w, body.String(), "    ")
+	w.WriteString("\n)")
+}
+
+func writeIndentedLines(w *strings.Builder, s, indent string) {
+	for i, line := range strings.Split(s, "\n") {
+		if i > 0 {
+			w.WriteString("\n")
+		}
+		if line == "" {
+			continue
+		}
+		w.WriteString(indent)
+		w.WriteString(line)
+	}
 }
 
 func GetSortedTables(tables TablesSet) []TableRef {
