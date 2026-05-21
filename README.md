@@ -1,12 +1,22 @@
 # qrafter
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/SennovE/qrafter.svg)](https://pkg.go.dev/github.com/SennovE/qrafter)
+[![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
 
-Qrafter forges dialect-aware SQL queries directly from Go structs.
+Qrafter forges dialect-aware SQL queries directly from typed Go structs.
 
-It is a small query builder focused on typed table definitions, composable SQL
-expressions, parameterized rendering, and scanning results back into the same
-column fields.
+It is a query builder for people who want to keep writing SQL-shaped Go
+code. Table structs define the available columns, queries compose from those
+typed columns, and rendering produces SQL plus driver arguments
+for `database/sql`, `sqlx`, and similar packages.
+
+## Why qrafter?
+
+- Define tables once as Go structs with typed `qrafter.Column[T]` fields
+- Compose `SELECT`, `INSERT`, `UPDATE`, and `DELETE` statements fluently
+- Render parameterized SQL instead of interpolating user values
+- Keep using your existing database driver, connection pool, and scanning flow
+- Scan results back into the same column fields when that fits your code
 
 ## Install
 
@@ -55,6 +65,15 @@ SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 
 [18 Alice]
 ```
 
+## When to use it
+
+Use qrafter when you want typed query composition in Go, but still want to see
+and control the SQL being generated.
+
+It is probably not the right fit if you want a full ORM, schema migrations,
+model lifecycle hooks, relationship loading, or generated code from an existing
+database schema.
+
 ## Features
 
 - Typed table structs with `qrafter.Column[T]`
@@ -67,3 +86,25 @@ SELECT "users"."id", "users"."user_name" FROM "users" WHERE "users"."age" >= $1 
 - Parameterized `DELETE` with `WHERE`, `USING`, CTEs, and `RETURNING`
 - CTEs, recursive CTEs, compound queries, aggregates, and window functions
 - `database/sql` and `sqlx`-friendly scanning helpers
+
+## Dialects
+
+Qrafter currently includes:
+
+- `dialect.BaseDialect` for ANSI-style double-quoted identifiers and `?`
+  placeholders
+- `dialect.PostgreSQL` for PostgreSQL-style `$1`, `$2`, ... placeholders
+
+New dialects can be added by implementing `dialect.Renderer`.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local
+development workflow and pull request guidelines.
+
+Good first areas to explore:
+
+- Add examples for common query patterns
+- Improve dialect coverage
+- Expand integration tests
+- Polish package documentation on pkg.go.dev
