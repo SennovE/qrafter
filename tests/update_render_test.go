@@ -55,7 +55,7 @@ WHERE "table"."user_name" = $1`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -72,7 +72,7 @@ func TestUpdateRender_SetFrom(t *testing.T) {
 		SetFrom(UserTable).
 		Where(UserTable.UserName.Eq("old"))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -95,7 +95,7 @@ func TestUpdateRender_WithFrom(t *testing.T) {
 		From(ManagerTable).
 		Where(ManagerTable.UserName.Eq("Bob"))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -118,7 +118,7 @@ func TestUpdateRender_AutoFromFromSetAndWhere(t *testing.T) {
 		Set(UserTable.Age, ManagerTable.Age).
 		Where(UserTable.UserName.Eq(ManagerTable.UserName))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -145,7 +145,7 @@ func TestUpdateRender_WithCTEFrom(t *testing.T) {
 		From(cte).
 		Where(UserTable.UserName.Eq(cte.Column("user_name")))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -169,7 +169,7 @@ func TestUpdateRender_WithQuestionMarkArgs(t *testing.T) {
 		Set(UserTable.UserName, "Alice").
 		Where(UserTable.Age.Ge("18"))
 
-	sql, args := query.Render(dialect.BaseDialect{})
+	sql, args := query.MustRender(dialect.BaseDialect{})
 
 	assert.Equal(t, `UPDATE "table"
 SET "user_name" = ?

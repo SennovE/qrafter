@@ -18,7 +18,7 @@ func TestSelectRender_WithArgs(t *testing.T) {
 			UserTable.Age.Ge(q.Param(18)),
 		)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -36,7 +36,7 @@ func TestCompoundQueryRender_WithArgs(t *testing.T) {
 		UnionAll(q.Select(q.Param(2))).
 		Limit(1)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(t, `SELECT 1
 UNION ALL
@@ -58,7 +58,7 @@ func TestCTERender_WithArgs(t *testing.T) {
 		Select(cte.Column("user_name")).
 		Where(cte.Column("user_name").Eq(q.Param("Alice")))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -82,7 +82,7 @@ func TestSelectRender_WithQuestionMarkArgs(t *testing.T) {
 		Select(UserTable.UserName).
 		Where(UserTable.UserName.Eq(q.Param("Alice")))
 
-	sql, args := query.Render(dialect.BaseDialect{})
+	sql, args := query.MustRender(dialect.BaseDialect{})
 
 	assert.Equal(
 		t,
@@ -101,7 +101,7 @@ func TestSelectRender_WithArgsKeepsConstantsInline(t *testing.T) {
 		Select(q.Literal(1)).
 		Where(UserTable.UserName.Eq("Alice"))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,

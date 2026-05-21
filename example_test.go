@@ -39,7 +39,7 @@ func ExampleSelect() {
 		Where(users.Age.Ge(18), users.UserName.Eq("Alice")).
 		OrderBy(users.ID.Asc()).
 		Limit(10).
-		Render(dialect.PostgreSQL{})
+		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
 	fmt.Println(args)
@@ -60,7 +60,7 @@ func ExampleInsert() {
 		Columns(users.UserName, users.Age).
 		Values("Alice", 18).
 		Returning(users.ID).
-		Render(dialect.PostgreSQL{})
+		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
 	fmt.Println(args)
@@ -79,7 +79,7 @@ func ExampleUpdate() {
 		Set(users.UserName, "Alice").
 		Where(users.ID.Eq(1)).
 		Returning(users.ID, users.UserName).
-		Render(dialect.PostgreSQL{})
+		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
 	fmt.Println(args)
@@ -98,7 +98,7 @@ func ExampleDelete() {
 	sql, args := q.Delete(users).
 		Where(users.Age.Lt(18)).
 		Returning(users.ID).
-		Render(dialect.PostgreSQL{})
+		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
 	fmt.Println(args)
@@ -119,7 +119,7 @@ func ExampleTableAlias() {
 
 	sql, _ := q.Select(users.UserName, managers.UserName).
 		Join(managers, users.Age.Eq(managers.Age)).
-		Render(dialect.PostgreSQL{})
+		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
 
@@ -137,7 +137,7 @@ func ExampleScanDest() {
 	defer db.Close()
 
 	user := q.MustNewTable[exampleUser]()
-	query, _ := q.Select(user.ID, user.UserName, user.Age).Render(dialect.PostgreSQL{})
+	query, _ := q.Select(user.ID, user.UserName, user.Age).MustRender(dialect.PostgreSQL{})
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -165,7 +165,7 @@ func ExampleSelectQuery_CTEs() {
 	cte1 := q.Select(q.Literal(1)).CTE("cte1").WithColumns("c1")
 	query := q.Select(cte1.Column("c1"))
 
-	sql, _ := query.Render(dialect.PostgreSQL{})
+	sql, _ := query.MustRender(dialect.PostgreSQL{})
 	fmt.Println(sql)
 	// Output:
 	// WITH "cte1" ("c1") AS (
@@ -200,7 +200,7 @@ func ExampleSelectQuery_CTEs_complex_recursive_query() {
 		Select(cte.Column("id"), cte.Column("parent_id"), cte.Column("level")).
 		OrderBy(cte.Column("level"))
 
-	sql, _ := query.Render(dialect.PostgreSQL{})
+	sql, _ := query.MustRender(dialect.PostgreSQL{})
 	fmt.Println(sql)
 	// Output:
 	// WITH RECURSIVE "nodes" AS (

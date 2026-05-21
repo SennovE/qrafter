@@ -19,7 +19,7 @@ func TestIntegrationSQLiteSQLXStructScan(t *testing.T) {
 	sqlText, args := q.
 		Select(q.Star()).
 		Where(users.ID.Eq(1)).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	rows, err := db.Queryx(sqlText, args...)
 	require.NoError(t, err)

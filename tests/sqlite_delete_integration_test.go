@@ -16,7 +16,7 @@ func TestIntegrationSQLiteDelete(t *testing.T) {
 	sqlText, args := q.
 		Delete(users).
 		Where(users.ID.Eq(1)).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	result, err := db.Exec(sqlText, args...)
 	require.NoError(t, err)

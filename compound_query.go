@@ -13,6 +13,8 @@ type CompoundQuery struct {
 	state *compoundQueryState
 }
 
+var _ core.QueryRenderer = CompoundQuery{}
+
 type compoundQueryState struct {
 	left          core.QueryExpression
 	right         core.QueryExpression
@@ -93,8 +95,15 @@ func (q CompoundQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-// Render renders the compound query and returns SQL plus bound arguments.
-func (q CompoundQuery) Render(d dialect.Renderer) (sql string, args []any) {
+// Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
+func (q CompoundQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
+	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	sql, args = q.MustRender(d)
+	return
+}
+
+// MustRender is like Render but panics if the query is invalid.
+func (q CompoundQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	renderer := core.NewArgsRenderer(d)
 	var w strings.Builder
 

@@ -46,7 +46,7 @@ RETURNING "table"."user_name"`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -66,7 +66,7 @@ func TestDeleteRender_WithUsing(t *testing.T) {
 			ManagerTable.UserName.Eq("Bob"),
 		)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -90,7 +90,7 @@ func TestDeleteRender_AutoUsingFromWhere(t *testing.T) {
 			ManagerTable.UserName.Eq("Bob"),
 		)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -115,7 +115,7 @@ func TestDeleteRender_WithCTEUsing(t *testing.T) {
 		Using(cte).
 		Where(UserTable.UserName.Eq(cte.Column("user_name")))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -137,7 +137,7 @@ func TestDeleteRender_WithQuestionMarkArgs(t *testing.T) {
 		Delete(UserTable).
 		Where(UserTable.UserName.Eq("Alice"))
 
-	sql, args := query.Render(dialect.BaseDialect{})
+	sql, args := query.MustRender(dialect.BaseDialect{})
 
 	assert.Equal(t, `DELETE FROM "table"
 WHERE "table"."user_name" = ?`, sql)

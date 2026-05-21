@@ -13,6 +13,8 @@ type UpdateQuery struct {
 	state *updateQueryState
 }
 
+var _ core.QueryRenderer = UpdateQuery{}
+
 type updateQueryState struct {
 	table       core.TableRef
 	assignments []updateAssignment
@@ -93,8 +95,15 @@ func (q UpdateQuery) Returning(items ...core.Selecter) UpdateQuery {
 	return q
 }
 
-// Render renders the query and returns SQL plus bound arguments.
-func (q UpdateQuery) Render(d dialect.Renderer) (sql string, args []any) {
+// Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
+func (q UpdateQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
+	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	sql, args = q.MustRender(d)
+	return
+}
+
+// MustRender is like Render but panics if the query is invalid.
+func (q UpdateQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	return renderStatement(d, q.CTEs(), q.RenderStatement)
 }
 
@@ -102,8 +111,11 @@ func (q UpdateQuery) Render(d dialect.Renderer) (sql string, args []any) {
 func (q UpdateQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
 	state := q.currentState()
 
-	w.WriteString("UPDATE ")
-	state.table.Render(w, d)
+	dialect.RenderUpdateTarget(w, d, func() {
+		state.table.Render(w, d)
+	}, len(state.from) > 0, func() {
+		renderUpdateFromTables(w, d, state.from)
+	})
 	renderUpdateAssignments(w, d, state.assignments)
 	renderUpdateFrom(w, d, state.from)
 	state.whereCl.Render(w, d)
@@ -177,7 +189,12 @@ func renderUpdateFrom(w *strings.Builder, d dialect.Renderer, from []core.TableR
 		return
 	}
 
-	w.WriteString("\nFROM ")
+	dialect.RenderUpdateFrom(w, d, func() {
+		renderUpdateFromTables(w, d, from)
+	})
+}
+
+func renderUpdateFromTables(w *strings.Builder, d dialect.Renderer, from []core.TableRef) {
 	core.RenderWithDelimiter(w, d, ", ", from)
 }
 

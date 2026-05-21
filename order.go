@@ -47,15 +47,9 @@ func (o Order) NullsLast() Order {
 
 // Render writes the SQL representation of the order item.
 func (o Order) Render(w *strings.Builder, d dialect.Renderer) {
-	o.expr.Render(w, d)
-	if o.direction != "" {
-		w.WriteString(" ")
-		w.WriteString(o.direction)
-	}
-	if o.nulls != "" {
-		w.WriteString(" NULLS ")
-		w.WriteString(o.nulls)
-	}
+	dialect.RenderOrder(w, d, func() {
+		o.expr.Render(w, d)
+	}, o.direction, o.nulls)
 }
 
 // Tables returns table references used by the order item.

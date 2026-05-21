@@ -21,7 +21,7 @@ func TestIntegrationSQLiteInsertValuesFrom(t *testing.T) {
 	sqlText, args := q.
 		Insert(users).
 		ValuesFrom(users).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	_, err := db.Exec(sqlText, args...)
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestIntegrationSQLiteInsertValuesRowsFromSlice(t *testing.T) {
 	sqlText, args := q.
 		Insert(users).
 		ValuesRowsFrom([]sqliteUser{carol, dave}).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	_, err := db.Exec(sqlText, args...)
 	require.NoError(t, err)

@@ -85,7 +85,7 @@ WHERE "table"."userAge" >= $1`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -101,7 +101,7 @@ func TestInsertRender_ValuesFrom(t *testing.T) {
 		Insert(UserTable).
 		ValuesFrom(UserTable)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(t, `INSERT INTO "table" ("user_name", "userAge")
 VALUES ($1, $2)`, sql)
@@ -117,7 +117,7 @@ func TestInsertRender_ValuesFromWithSelectedColumns(t *testing.T) {
 		Columns(UserTable.UserName).
 		ValuesFrom(UserTable)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(t, `INSERT INTO "table" ("user_name")
 VALUES ($1)`, sql)
@@ -137,7 +137,7 @@ func TestInsertRender_ValuesRowsFromSlice(t *testing.T) {
 		Insert(first).
 		ValuesRowsFrom([]User{first, second})
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -164,7 +164,7 @@ func TestInsertRender_ValuesRowsFromPointerSliceWithSelectedColumns(t *testing.T
 		Columns(first.Age, first.UserName).
 		ValuesRowsFrom(&rows)
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -188,7 +188,7 @@ func TestInsertRender_FromSelectWithCTE(t *testing.T) {
 		Columns(UserTable.UserName, UserTable.Age).
 		FromSelect(q.Select(cte.Column("user_name"), cte.Column("age")))
 
-	sql, args := query.Render(dialect.PostgreSQL{})
+	sql, args := query.MustRender(dialect.PostgreSQL{})
 
 	assert.Equal(
 		t,
@@ -211,7 +211,7 @@ func TestInsertRender_WithQuestionMarkArgs(t *testing.T) {
 		Columns(UserTable.UserName).
 		Values("Alice")
 
-	sql, args := query.Render(dialect.BaseDialect{})
+	sql, args := query.MustRender(dialect.BaseDialect{})
 
 	assert.Equal(t, `INSERT INTO "table" ("user_name")
 VALUES (?)`, sql)

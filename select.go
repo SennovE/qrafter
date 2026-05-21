@@ -13,6 +13,8 @@ type SelectQuery struct {
 	state *selectQueryState
 }
 
+var _ core.QueryRenderer = SelectQuery{}
+
 type selectQueryState struct {
 	withCl        clauses.WithClause
 	selectCl      clauses.SelectClause
@@ -138,8 +140,15 @@ func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 	return q.CTE(name).Recursive()
 }
 
-// Render renders the query and returns SQL plus bound arguments.
-func (q SelectQuery) Render(d dialect.Renderer) (sql string, args []any) {
+// Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
+func (q SelectQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
+	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	sql, args = q.MustRender(d)
+	return
+}
+
+// MustRender is like Render but panics if the query is invalid.
+func (q SelectQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	state := q.currentState()
 	return renderStatementWithClause(d, state.withCl, q.CTEs(), q.RenderStatement)
 }

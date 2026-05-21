@@ -39,8 +39,9 @@ func renderReturning(w *strings.Builder, d dialect.Renderer, returning []core.Se
 		return
 	}
 
-	w.WriteString("\nRETURNING ")
-	core.RenderWithDelimiter(w, d, ", ", returning)
+	dialect.RenderReturning(w, d, func() {
+		core.RenderWithDelimiter(w, d, ", ", returning)
+	})
 }
 
 func (c cteCollector) RenderQueryExpression(_ *strings.Builder, _ dialect.Renderer) {}

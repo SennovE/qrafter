@@ -124,7 +124,7 @@ ORDER BY COUNT(*) DESC`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -178,7 +178,7 @@ GROUP BY "manager"."user_name"`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -277,7 +277,7 @@ LIMIT 10`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Equal(t, tt.args, args)
 		})
@@ -387,7 +387,7 @@ FROM "table"`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			str, args := tt.query.Render(dialect.PostgreSQL{})
+			str, args := tt.query.MustRender(dialect.PostgreSQL{})
 			assert.Equal(t, tt.wantSQL, str)
 			assert.Empty(t, args)
 		})

@@ -145,13 +145,15 @@ qrafter currently includes:
 
 * `dialect.BaseDialect` for ANSI-style double-quoted identifiers and `?` placeholders
 * `dialect.PostgreSQL` for PostgreSQL-style `$1`, `$2`, ... placeholders
-* `dialect.MySQL` for backtick-quoted identifiers and MySQL `LIMIT`/`OFFSET`
-* `dialect.SQLite` for SQLite literals and `LIMIT`/`OFFSET`
+* `dialect.MySQL` for backtick-quoted identifiers, MySQL `LIMIT`/`OFFSET`,
+  empty-row inserts, multi-table `UPDATE`/`DELETE`, and NULL ordering emulation
+* `dialect.SQLite` for SQLite literals, `LIMIT`/`OFFSET`, and fail-fast
+  handling for unsupported `DELETE USING`
 
-Dialect support currently covers syntax qrafter can vary safely: identifier
-quoting, literals, placeholders, and `LIMIT`/`OFFSET`. Some features still need
-dedicated per-database rendering before they are fully portable, such as
-`RETURNING`, `UPDATE ... FROM`, `DELETE ... USING`, and `NULLS FIRST/LAST`.
+Dialect support is built from small rendering hooks. New dialects can start with
+identifier quoting, literals, placeholders, and `LIMIT`/`OFFSET`, then override
+focused feature hooks for clauses such as `RETURNING`, `UPDATE` sources,
+`DELETE` sources, joins, default inserts, and NULL ordering.
 
 New dialects can be added by implementing `dialect.Renderer`.
 

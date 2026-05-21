@@ -26,7 +26,7 @@ func TestIntegrationSQLiteDirectColumnScan(t *testing.T) {
 	sqlText, args := q.
 		Select(users.ID, users.UserName, users.NickName).
 		Where(users.ID.Eq(1)).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	require.NoError(t, db.QueryRow(sqlText, args...).Scan(&users.ID, &users.UserName, &users.NickName))
 
@@ -42,7 +42,7 @@ func TestIntegrationSQLiteScanDest(t *testing.T) {
 	sqlText, args := q.
 		Select(users.ID, users.UserName, users.NickName).
 		Where(users.ID.Eq(2)).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	dest, err := q.ScanDest(&users)
 	require.NoError(t, err)

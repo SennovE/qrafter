@@ -1,9 +1,18 @@
 package dialect
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+const (
+	sqliteDeleteUsingFeature = "DELETE USING"
+	sqliteDialectName        = "SQLite"
+)
 
 // SQLite renders qrafter queries using SQLite placeholder and LIMIT/OFFSET
-// syntax.
+// syntax. Unsupported SQLite features, such as DELETE USING, fail fast with
+// UnsupportedFeatureError.
 type SQLite struct {
 	BaseDialect
 }
@@ -19,6 +28,28 @@ func (SQLite) Literal(value any) string {
 	default:
 		return BaseDialect{}.Literal(v)
 	}
+}
+
+// RenderDeleteTarget renders SQLite DELETE syntax.
+func (SQLite) RenderDeleteTarget(
+	w *strings.Builder,
+	renderTarget func(),
+	_ func(),
+	hasUsing bool,
+	_ func(),
+) {
+	if hasUsing {
+		panic(UnsupportedFeatureError{Dialect: sqliteDialectName, Feature: sqliteDeleteUsingFeature})
+	}
+
+	w.WriteString("DELETE FROM ")
+	renderTarget()
+}
+
+// RenderDeleteUsing rejects DELETE USING because SQLite has no native USING
+// clause for DELETE statements.
+func (SQLite) RenderDeleteUsing(_ *strings.Builder, _ func()) {
+	panic(UnsupportedFeatureError{Dialect: sqliteDialectName, Feature: sqliteDeleteUsingFeature})
 }
 
 // LimitOffset renders SQLite LIMIT/OFFSET clauses.

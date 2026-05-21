@@ -13,6 +13,8 @@ type DeleteQuery struct {
 	state *deleteQueryState
 }
 
+var _ core.QueryRenderer = DeleteQuery{}
+
 type deleteQueryState struct {
 	table     core.TableRef
 	using     []core.TableRef
@@ -53,8 +55,15 @@ func (q DeleteQuery) Returning(items ...core.Selecter) DeleteQuery {
 	return q
 }
 
-// Render renders the query and returns SQL plus bound arguments.
-func (q DeleteQuery) Render(d dialect.Renderer) (sql string, args []any) {
+// Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
+func (q DeleteQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
+	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	sql, args = q.MustRender(d)
+	return
+}
+
+// MustRender is like Render but panics if the query is invalid.
+func (q DeleteQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	return renderStatement(d, q.CTEs(), q.RenderStatement)
 }
 
@@ -62,8 +71,13 @@ func (q DeleteQuery) Render(d dialect.Renderer) (sql string, args []any) {
 func (q DeleteQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
 	state := q.currentState()
 
-	w.WriteString("DELETE FROM ")
-	state.table.Render(w, d)
+	dialect.RenderDeleteTarget(w, d, func() {
+		state.table.Render(w, d)
+	}, func() {
+		renderDeleteTargetName(w, d, state.table)
+	}, len(state.using) > 0, func() {
+		renderDeleteUsingTables(w, d, state.using)
+	})
 	renderDeleteUsing(w, d, state.using)
 	state.whereCl.Render(w, d)
 	renderReturning(w, d, state.returning)
@@ -122,6 +136,15 @@ func renderDeleteUsing(w *strings.Builder, d dialect.Renderer, using []core.Tabl
 		return
 	}
 
-	w.WriteString("\nUSING ")
+	dialect.RenderDeleteUsing(w, d, func() {
+		renderDeleteUsingTables(w, d, using)
+	})
+}
+
+func renderDeleteUsingTables(w *strings.Builder, d dialect.Renderer, using []core.TableRef) {
 	core.RenderWithDelimiter(w, d, ", ", using)
+}
+
+func renderDeleteTargetName(w *strings.Builder, d dialect.Renderer, table core.TableRef) {
+	w.WriteString(d.QuoteIdent(table.SQLName()))
 }

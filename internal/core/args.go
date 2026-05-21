@@ -15,6 +15,10 @@ func NewArgsRenderer(d dialect.Renderer) *ArgsRenderer {
 	return &ArgsRenderer{Renderer: d}
 }
 
+func (r *ArgsRenderer) UnwrapRenderer() dialect.Renderer {
+	return r.Renderer
+}
+
 func (r *ArgsRenderer) AddArg(value any) string {
 	r.args = append(r.args, value)
 	return r.Placeholder(len(r.args))

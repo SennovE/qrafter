@@ -47,7 +47,7 @@ func TestSelectRender_WithCTE(t *testing.T) {
 			Join(cte, UsersTable.ID.Eq(TotalAmountsCTE.UserID)).
 			Where(TotalAmountsCTE.Total.Gt(100))
 
-		str, args := query.Render(dialect.PostgreSQL{})
+		str, args := query.MustRender(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (
@@ -71,7 +71,7 @@ WHERE "total_amounts"."total" > $2`,
 			Join(cte, UsersTable.ID.Eq(cte.Column("user_id"))).
 			Where(cte.Column("total").Gt(100))
 
-		str, args := query.Render(dialect.PostgreSQL{})
+		str, args := query.MustRender(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH "total_amounts" ("user_id", "total") AS (
@@ -100,7 +100,7 @@ func TestSelectRender_WithRecursiveCTE(t *testing.T) {
 
 		query := q.Select(cte.Column("n"))
 
-		str, args := query.Render(dialect.PostgreSQL{})
+		str, args := query.MustRender(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (
@@ -121,7 +121,7 @@ FROM "numbers"`,
 
 		query := q.Select(cte.Column("n"))
 
-		str, args := query.Render(dialect.PostgreSQL{})
+		str, args := query.MustRender(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (
@@ -154,7 +154,7 @@ FROM "numbers"`,
 
 		query := q.Select(cte.Column("n"))
 
-		str, args := query.Render(dialect.PostgreSQL{})
+		str, args := query.MustRender(dialect.PostgreSQL{})
 		assert.Equal(
 			t,
 			`WITH RECURSIVE "numbers" ("n") AS (
@@ -177,7 +177,7 @@ func TestSelectRender_WithMultipleCTEs(t *testing.T) {
 	cte2 := q.Select(cte1.Column("c1")).CTE("cte2").WithColumns("c1")
 	query := q.Select(cte1.Column("c1"), cte2.Column("c1")).CrossJoin(cte2)
 
-	str, args := query.Render(dialect.PostgreSQL{})
+	str, args := query.MustRender(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
 		`WITH "cte1" ("c1") AS (
@@ -235,7 +235,7 @@ func TestSelectRender_ComplexRecursiveQuery(t *testing.T) {
 		Select(cte.Column("id"), cte.Column("parent_id"), cte.Column("level")).
 		OrderBy(cte.Column("level"))
 
-	str, args := query.Render(dialect.PostgreSQL{})
+	str, args := query.MustRender(dialect.PostgreSQL{})
 	assert.Equal(
 		t,
 		`WITH RECURSIVE "nodes" AS (

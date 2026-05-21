@@ -19,7 +19,7 @@ func TestIntegrationSQLiteUpdate(t *testing.T) {
 		Set(users.UserName, "Alicia").
 		Set(users.NickName, sql.NullString{String: "Ace", Valid: true}).
 		Where(users.ID.Eq(1)).
-		Render(dialect.SQLite{})
+		MustRender(dialect.SQLite{})
 
 	result, err := db.Exec(sqlText, args...)
 	require.NoError(t, err)

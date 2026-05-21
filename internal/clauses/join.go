@@ -1,7 +1,6 @@
 package clauses
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/SennovE/qrafter/dialect"
@@ -18,17 +17,22 @@ type JoinClause struct {
 var _ Clauser = (*JoinClause)(nil)
 
 func (c *JoinClause) Render(w *strings.Builder, d dialect.Renderer) {
-	fmt.Fprintf(w, "\n%s ", c.Type)
-	c.Table.Render(w, d)
+	dialect.RenderJoin(w, d, c.Type, func() {
+		c.Table.Render(w, d)
+	}, func() {
+		renderJoinPredicates(w, d, c.Predicates)
+	})
+}
 
-	if len(c.Predicates) == 0 {
+func renderJoinPredicates(w *strings.Builder, d dialect.Renderer, predicates []core.Predicater) {
+	if len(predicates) == 0 {
 		return
 	}
 
 	w.WriteString(" ON ")
-	if len(c.Predicates) == 1 {
-		c.Predicates[0].Render(w, d)
+	if len(predicates) == 1 {
+		predicates[0].Render(w, d)
 		return
 	}
-	pred.Logical(pred.OpAnd, c.Predicates...).Render(w, d)
+	pred.Logical(pred.OpAnd, predicates...).Render(w, d)
 }

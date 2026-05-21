@@ -13,6 +13,8 @@ type InsertQuery struct {
 	state *insertQueryState
 }
 
+var _ core.QueryRenderer = InsertQuery{}
+
 type insertQueryState struct {
 	table         core.TableRef
 	columns       []ColumnRef
@@ -168,8 +170,15 @@ func (q InsertQuery) Returning(items ...core.Selecter) InsertQuery {
 	return q
 }
 
-// Render renders the query and returns SQL plus bound arguments.
-func (q InsertQuery) Render(d dialect.Renderer) (sql string, args []any) {
+// Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
+func (q InsertQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
+	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	sql, args = q.MustRender(d)
+	return
+}
+
+// MustRender is like Render but panics if the query is invalid.
+func (q InsertQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	return renderStatement(d, q.CTEs(), q.RenderStatement)
 }
 
@@ -183,7 +192,7 @@ func (q InsertQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
 
 	switch {
 	case state.defaultValues || state.source == nil && len(state.rows) == 0:
-		w.WriteString("\nDEFAULT VALUES")
+		dialect.RenderDefaultValues(w, d)
 	case state.source != nil:
 		w.WriteString("\n")
 		state.source.RenderQueryExpression(w, d)

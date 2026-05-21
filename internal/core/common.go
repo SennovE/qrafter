@@ -19,7 +19,8 @@ type Renderer interface {
 }
 
 type QueryRenderer interface {
-	Render(d dialect.Renderer) (sql string, args []any)
+	Render(d dialect.Renderer) (sql string, args []any, err error)
+	MustRender(d dialect.Renderer) (sql string, args []any)
 }
 
 type QueryExpression interface {
