@@ -22,18 +22,6 @@ func (e UnsupportedFeatureError) Error() string {
 	return fmt.Sprintf("%s dialect does not support %s", e.Dialect, e.Feature)
 }
 
-// RecoverFromUnsupportedFeatureError recovers from a panic with UnsupportedFeatureError
-// and stores it in err; all other panics are re-thrown.
-func RecoverFromUnsupportedFeatureError(err *error) {
-	if r := recover(); r != nil {
-		if e, ok := r.(UnsupportedFeatureError); ok {
-			*err = e
-		} else {
-			panic(r)
-		}
-	}
-}
-
 // DefaultValuesRenderer customizes INSERT DEFAULT VALUES rendering.
 type DefaultValuesRenderer interface {
 	RenderDefaultValues(w *strings.Builder)

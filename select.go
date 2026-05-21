@@ -142,7 +142,15 @@ func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 
 // Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
 func (q SelectQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
-	defer dialect.RecoverFromUnsupportedFeatureError(&err)
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(dialect.UnsupportedFeatureError); ok {
+				err = e
+				return
+			}
+			panic(r)
+		}
+	}()
 	sql, args = q.MustRender(d)
 	return
 }
