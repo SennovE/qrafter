@@ -53,13 +53,13 @@ func PartitionBy(cols ...any) WindowSpec {
 
 // PartitionBy appends PARTITION BY expressions to the window specification.
 func (s WindowSpec) PartitionBy(cols ...any) WindowSpec {
-	s.partitionBy = append(s.partitionBy, asSelecters(cols)...)
+	s.partitionBy = append(append([]core.Selecter(nil), s.partitionBy...), asSelecters(cols)...)
 	return s
 }
 
 // OrderBy appends ORDER BY expressions to the window specification.
 func (s WindowSpec) OrderBy(items ...any) WindowSpec {
-	s.orderBy = append(s.orderBy, asSelecters(items)...)
+	s.orderBy = append(append([]core.Selecter(nil), s.orderBy...), asSelecters(items)...)
 	return s
 }
 

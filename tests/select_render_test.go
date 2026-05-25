@@ -131,6 +131,34 @@ ORDER BY COUNT(*) DESC`,
 	}
 }
 
+func TestSelectRender_CloneDoesNotMutateBaseQuery(t *testing.T) {
+	users := q.MustNewTable[User]()
+	managers, err := q.TableAlias(users, "manager")
+	require.NoError(t, err)
+
+	base := q.Select(users.UserName)
+	filtered := base.Where(users.Age.Ge("18"))
+	joined := base.Join(managers, users.UserName.Eq(managers.UserName))
+
+	baseSQL, baseArgs := base.MustRender(dialect.PostgreSQL{})
+	filteredSQL, filteredArgs := filtered.MustRender(dialect.PostgreSQL{})
+	joinedSQL, joinedArgs := joined.MustRender(dialect.PostgreSQL{})
+
+	assert.Equal(t, `SELECT "table"."user_name"
+FROM "table"`, baseSQL)
+	assert.Empty(t, baseArgs)
+
+	assert.Equal(t, `SELECT "table"."user_name"
+FROM "table"
+WHERE "table"."userAge" >= $1`, filteredSQL)
+	assert.Equal(t, []any{"18"}, filteredArgs)
+
+	assert.Equal(t, `SELECT "table"."user_name"
+FROM "table"
+JOIN "table" AS "manager" ON "table"."user_name" = "manager"."user_name"`, joinedSQL)
+	assert.Empty(t, joinedArgs)
+}
+
 func TestSelectRender_WithJoin(t *testing.T) {
 	UserTable := q.MustNewTable[User]()
 

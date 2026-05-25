@@ -24,11 +24,14 @@
 //
 //	users := qrafter.MustNewTable[User]()
 //
-//	sql, args := qrafter.Select(users.ID, users.UserName).
+//	sql, args, err := qrafter.Select(users.ID, users.UserName).
 //		Where(users.Age.Ge(18), users.UserName.Eq("Alice")).
 //		OrderBy(users.ID.Asc()).
 //		Limit(10).
 //		Render(dialect.PostgreSQL{})
+//	if err != nil {
+//		panic(err)
+//	}
 //
 // The rendered SQL uses dialect-specific identifier quoting, placeholders, and
 // clause-level line breaks. For PostgreSQL, the example above renders:

@@ -79,12 +79,12 @@ func ExampleCreateTableStmt_FromModel() {
 	// )
 }
 
-func ExampleColumn_inferredType() {
+func ExampleColumn() {
 	users := q.MustNewTable[exampleUser]()
 
 	sql := ddl.CreateTable("email_archive").
 		Columns(
-			ddl.Column(users.Email),
+			ddl.Column(users.Email, ddl.Text()),
 			ddl.Column("archived_at", ddl.TimestampTZ()).NotNull(),
 		).
 		MustRender(dialect.PostgreSQL{})

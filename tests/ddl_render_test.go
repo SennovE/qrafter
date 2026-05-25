@@ -35,6 +35,7 @@ type DDLInferredUser struct {
 	Active    q.Column[bool]
 	CreatedAt q.Column[time.Time] `ddl:"type:TIMESTAMP"`
 	Data      q.Column[[]byte]    `db:"data"`
+	Score     q.Column[float64]   `db:"score" ddl:"NUMERIC(10, 2)"`
 	Ignored   q.Column[string]    `ddl:"-"`
 }
 
@@ -83,16 +84,17 @@ func TestDDLCreateTableFromModelInfersColumnTypes(t *testing.T) {
     "email" VARCHAR(320),
     "active" BOOLEAN,
     "created_at" TIMESTAMP,
-    "data" BYTEA
+    "data" BYTEA,
+    "score" NUMERIC(10, 2)
 )`, sql)
 }
 
-func TestDDLColumnInfersTypeFromColumnValue(t *testing.T) {
+func TestDDLColumnUsesExplicitType(t *testing.T) {
 	users := q.MustNewTable[DDLUser]()
 
 	sql, err := ddl.CreateTable("manual_users").
 		Columns(
-			ddl.Column(users.Email),
+			ddl.Column(users.Email, ddl.Text()),
 			ddl.Column("nickname", ddl.VarChar(64)),
 		).
 		Render(dialect.PostgreSQL{})

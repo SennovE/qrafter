@@ -35,11 +35,10 @@ type columnConstraint struct {
 }
 
 // Column creates a column definition. Name can be a string or qrafter.Column.
-// If typ is omitted, the type is inferred from qrafter.Column[T].
-func Column(name any, typ ...Type) ColumnDef {
+func Column(name any, typ Type) ColumnDef {
 	return ColumnDef{
 		name: columnName(name),
-		typ:  columnType(name, typ),
+		typ:  typ,
 	}
 }
 
@@ -98,7 +97,7 @@ func (c ColumnDef) References(table any, columns ...any) ColumnDef {
 }
 
 func (c ColumnDef) appendConstraint(constraint *columnConstraint) ColumnDef {
-	c.constraints = append(c.constraints, *constraint)
+	c.constraints = append(append([]columnConstraint(nil), c.constraints...), *constraint)
 	return c
 }
 

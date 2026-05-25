@@ -142,17 +142,9 @@ func (q SelectQuery) RecursiveCTE(name string) CommonTableExpression {
 
 // Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
 func (q SelectQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(dialect.UnsupportedFeatureError); ok {
-				err = e
-				return
-			}
-			panic(r)
-		}
-	}()
-	sql, args = q.MustRender(d)
-	return
+	return renderQuery(func() (string, []any) {
+		return q.MustRender(d)
+	})
 }
 
 // MustRender is like Render but panics if the query is invalid.
@@ -218,6 +210,34 @@ func (q SelectQuery) currentState() selectQueryState {
 
 func (q SelectQuery) cloneState() SelectQuery {
 	state := q.currentState()
+	state.withCl.CTEs = append([]*core.CTERef(nil), state.withCl.CTEs...)
+	state.selectCl.Columns = append([]core.Selecter(nil), state.selectCl.Columns...)
+	state.fromCl = cloneFromClause(state.fromCl)
+	state.whereCl.Predicates = append([]core.Predicater(nil), state.whereCl.Predicates...)
+	state.groupByCl.Columns = append([]core.Selecter(nil), state.groupByCl.Columns...)
+	state.havingCl.Predicates = append([]core.Predicater(nil), state.havingCl.Predicates...)
+	state.orderByCl.Items = append([]core.Selecter(nil), state.orderByCl.Items...)
 	q.state = &state
 	return q
+}
+
+func cloneFromClause(cl clauses.FromClause) clauses.FromClause {
+	cl.Tables = cloneTablesSet(cl.Tables)
+	cl.Joins = append([]clauses.JoinClause(nil), cl.Joins...)
+	for i := range cl.Joins {
+		cl.Joins[i].Predicates = append([]core.Predicater(nil), cl.Joins[i].Predicates...)
+	}
+	return cl
+}
+
+func cloneTablesSet(tables core.TablesSet) core.TablesSet {
+	if len(tables) == 0 {
+		return nil
+	}
+
+	cloned := make(core.TablesSet, len(tables))
+	for table := range tables {
+		cloned[table] = struct{}{}
+	}
+	return cloned
 }

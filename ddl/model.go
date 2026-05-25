@@ -100,25 +100,6 @@ func typeFromField(sf *reflect.StructField) Type {
 	return typeFromColumnType(sf.Type)
 }
 
-func columnType(column any, types []Type) Type {
-	switch len(types) {
-	case 0:
-		return typeFromColumnValue(column)
-	case 1:
-		return types[0]
-	default:
-		panic(fmt.Errorf("ddl.Column accepts at most one type"))
-	}
-}
-
-func typeFromColumnValue(column any) Type {
-	t := reflect.TypeOf(column)
-	if t == nil {
-		panic(fmt.Errorf("cannot infer ddl type from nil column"))
-	}
-	return typeFromColumnType(t)
-}
-
 func typeFromColumnType(t reflect.Type) Type {
 	t = indirectType(t)
 	if t.Kind() == reflect.Struct {
@@ -135,7 +116,7 @@ func typeFromDDLTag(tag string) (Type, bool) {
 		return Type{}, false
 	}
 
-	typeName := strings.TrimSpace(strings.Split(tag, ",")[0])
+	typeName := tag
 	lowerTypeName := strings.ToLower(typeName)
 	if strings.HasPrefix(lowerTypeName, typeTagPrefix) {
 		typeName = strings.TrimSpace(typeName[len(typeTagPrefix):])

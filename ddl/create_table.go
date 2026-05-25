@@ -38,14 +38,14 @@ func (s CreateTableStmt) IfNotExists() CreateTableStmt {
 }
 
 // Column appends a column definition.
-func (s CreateTableStmt) Column(name any, typ ...Type) CreateTableStmt {
-	return s.Columns(Column(name, typ...))
+func (s CreateTableStmt) Column(name any, typ Type) CreateTableStmt {
+	return s.Columns(Column(name, typ))
 }
 
 // Columns appends column definitions.
 func (s CreateTableStmt) Columns(columns ...ColumnDef) CreateTableStmt {
 	state := s.currentState()
-	state.columns = append(state.columns, columns...)
+	state.columns = append(append([]ColumnDef(nil), state.columns...), columns...)
 	return CreateTableStmt{state: &state}
 }
 
@@ -54,7 +54,7 @@ func (s CreateTableStmt) Columns(columns ...ColumnDef) CreateTableStmt {
 // type inferred from qrafter.Column[T]; ddl:"-" skips the field.
 func (s CreateTableStmt) FromModel() CreateTableStmt {
 	state := s.currentState()
-	state.columns = append(state.columns, columnsFromModel(state.model)...)
+	state.columns = append(append([]ColumnDef(nil), state.columns...), columnsFromModel(state.model)...)
 	return CreateTableStmt{state: &state}
 }
 
@@ -66,7 +66,7 @@ func (s CreateTableStmt) Constraint(constraint Constraint) CreateTableStmt {
 // Constraints appends table-level constraints.
 func (s CreateTableStmt) Constraints(constraints ...Constraint) CreateTableStmt {
 	state := s.currentState()
-	state.constraints = append(state.constraints, constraints...)
+	state.constraints = append(append([]Constraint(nil), state.constraints...), constraints...)
 	return CreateTableStmt{state: &state}
 }
 

@@ -57,7 +57,7 @@ type User struct {
 func main() {
 	users := q.MustNewTable[User]()
 
-	sql, args := q.Select(users.ID, users.UserName).
+	sql, args, err := q.Select(users.ID, users.UserName).
 		Where(
 			users.Age.Ge(18),
 			users.UserName.Eq("Alice"),
@@ -65,6 +65,9 @@ func main() {
 		OrderBy(users.ID.Asc()).
 		Limit(10).
 		Render(dialect.PostgreSQL{})
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println(sql)
 	fmt.Println(args)
@@ -158,8 +161,8 @@ sql, err := ddl.CreateTable(users).
 DDL rendering returns an error when a dialect cannot safely render a requested
 feature, such as SQLite column type changes or MySQL partial indexes.
 
-Column types can also be inferred from `qrafter.Column[T]`, or overridden with a
-field tag when using `FromModel()`:
+When using `FromModel()`, column types are inferred from `qrafter.Column[T]` and
+can be overridden with a field tag:
 
 ```go
 type User struct {

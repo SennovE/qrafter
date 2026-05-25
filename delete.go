@@ -57,17 +57,9 @@ func (q DeleteQuery) Returning(items ...core.Selecter) DeleteQuery {
 
 // Render renders the query and returns SQL, bound arguments and an error if the query is invalid.
 func (q DeleteQuery) Render(d dialect.Renderer) (sql string, args []any, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if e, ok := r.(dialect.UnsupportedFeatureError); ok {
-				err = e
-				return
-			}
-			panic(r)
-		}
-	}()
-	sql, args = q.MustRender(d)
-	return
+	return renderQuery(func() (string, []any) {
+		return q.MustRender(d)
+	})
 }
 
 // MustRender is like Render but panics if the query is invalid.

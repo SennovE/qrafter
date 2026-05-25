@@ -1,6 +1,7 @@
 package qrafter
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/SennovE/qrafter/dialect"
@@ -13,6 +14,28 @@ type cteCollector struct {
 }
 
 type statementBodyRenderer func(w *strings.Builder, d dialect.Renderer)
+
+type queryRenderer func() (sql string, args []any)
+
+func renderQuery(fn queryRenderer) (sql string, args []any, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			sql = ""
+			args = nil
+			err = panicToError(recovered)
+		}
+	}()
+
+	sql, args = fn()
+	return sql, args, nil
+}
+
+func panicToError(value any) error {
+	if err, ok := value.(error); ok {
+		return err
+	}
+	return fmt.Errorf("%v", value)
+}
 
 func renderStatement(d dialect.Renderer, ctes []*core.CTERef, renderBody statementBodyRenderer) (sql string, args []any) {
 	return renderStatementWithClause(d, clauses.WithClause{}, ctes, renderBody)

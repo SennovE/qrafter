@@ -130,7 +130,7 @@ func (s AlterTableStmt) MustRender(d dialect.Renderer) string {
 }
 
 func (s AlterTableStmt) appendOperation(operation *alterOperation) AlterTableStmt {
-	s.operations = append(s.operations, *operation)
+	s.operations = append(append([]alterOperation(nil), s.operations...), *operation)
 	return s
 }
 
