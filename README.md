@@ -137,7 +137,41 @@ Less ideal fits:
 * CTEs and recursive CTEs
 * Compound queries such as `UNION` and `UNION ALL`
 * Aggregates and window functions
+* DDL builders for tables, columns, constraints, and indexes
 * `database/sql` and `sqlx`-friendly scanning helpers
+
+## DDL
+
+Schema statements live in the separate `ddl` package so the root package can
+stay focused on query building:
+
+```go
+sql, err := ddl.CreateTable(users).
+	Columns(
+		ddl.Column(users.ID, ddl.BigSerial()).PrimaryKey(),
+		ddl.Column(users.Email, ddl.Text()).NotNull().Unique(),
+		ddl.Column(users.CreatedAt, ddl.TimestampTZ()).DefaultExpr("now()"),
+	).
+	Render(dialect.PostgreSQL{})
+```
+
+DDL rendering returns an error when a dialect cannot safely render a requested
+feature, such as SQLite column type changes or MySQL partial indexes.
+
+Column types can also be inferred from `qrafter.Column[T]`, or overridden with a
+field tag when using `FromModel()`:
+
+```go
+type User struct {
+	q.Table `table:"users"`
+
+	ID    q.Column[int64]  `db:"id"`
+	Email q.Column[string] `db:"email" ddl:"VARCHAR(320)"`
+}
+
+users := q.MustNewTable[User]()
+sql, err := ddl.CreateTable(users).FromModel().Render(dialect.PostgreSQL{})
+```
 
 ## Dialects
 

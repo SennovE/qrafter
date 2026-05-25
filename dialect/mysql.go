@@ -21,6 +21,11 @@ type MySQL struct {
 	BaseDialect
 }
 
+// DialectName returns the dialect name.
+func (MySQL) DialectName() string {
+	return mysqlDialectName
+}
+
 // QuoteIdent renders a MySQL backtick-quoted identifier.
 func (MySQL) QuoteIdent(ident string) string {
 	return utils.QuoteWith(ident, "`")

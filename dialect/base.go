@@ -21,6 +21,11 @@ type Renderer interface {
 // BaseDialect renders ANSI-style identifiers, literals, placeholders, and limits.
 type BaseDialect struct{}
 
+// DialectName returns the dialect name.
+func (BaseDialect) DialectName() string {
+	return "BaseDialect"
+}
+
 // QuoteIdent renders a double-quoted identifier.
 func (BaseDialect) QuoteIdent(ident string) string {
 	return utils.QuoteWith(ident, `"`)

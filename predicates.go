@@ -5,6 +5,7 @@ import (
 
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
+	"github.com/SennovE/qrafter/internal/expr"
 	"github.com/SennovE/qrafter/internal/pred"
 )
 
@@ -85,4 +86,14 @@ func (e Expression) Ge(v any) Predicate {
 // Eq returns an equality predicate.
 func (e Expression) Eq(v any) Predicate {
 	return newPredicate(pred.Binary("=", e.selecter, asSelecter(v)))
+}
+
+// IsNull returns an IS NULL predicate.
+func (e Expression) IsNull() Predicate {
+	return newPredicate(pred.Binary("IS", e.selecter, expr.Literal(nil)))
+}
+
+// IsNotNull returns an IS NOT NULL predicate.
+func (e Expression) IsNotNull() Predicate {
+	return newPredicate(pred.Binary("IS NOT", e.selecter, expr.Literal(nil)))
 }

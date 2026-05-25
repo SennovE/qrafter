@@ -17,6 +17,11 @@ type SQLite struct {
 	BaseDialect
 }
 
+// DialectName returns the dialect name.
+func (SQLite) DialectName() string {
+	return sqliteDialectName
+}
+
 // Literal renders SQLite-friendly inline SQL literals.
 func (SQLite) Literal(value any) string {
 	switch v := value.(type) {
