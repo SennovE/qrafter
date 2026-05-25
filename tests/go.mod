@@ -9,7 +9,7 @@ require (
 	modernc.org/sqlite v1.50.1
 )
 
-replace github.com/SennovE/qrafter => ..
+replace github.com/SennovE/qrafter => ../
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

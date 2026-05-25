@@ -2,6 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/SennovE/qrafter.svg)](https://pkg.go.dev/github.com/SennovE/qrafter)
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/SennovE/qrafter)](https://goreportcard.com/report/github.com/SennovE/qrafter)
 
 **qrafter is a small type-safe SQL query builder for Go - no ORM, no codegen, just typed SQL-shaped Go.**
 
@@ -32,7 +33,7 @@ code.
 
 ```sh
 go get github.com/SennovE/qrafter
-````
+```
 
 ## Quick start
 
@@ -84,6 +85,19 @@ ORDER BY "users"."id" ASC
 LIMIT 10
 [18 Alice]
 ```
+
+## Larger examples
+
+More application-shaped examples live in [examples](examples):
+
+* [database_sql](examples/database_sql) shows repository-style code with
+  `database/sql`, context-aware execution, and typed query rendering.
+* [microservice](examples/microservice) is a runnable HTTP service with
+  SQLite, qrafter-rendered migrations, and database methods.
+* [reporting](examples/reporting) builds a larger analytical query with joins,
+  grouping, a CTE, and a window function.
+* [schema](examples/schema) renders DDL for tables, constraints, indexes, and
+  table alterations.
 
 ## How it works
 
