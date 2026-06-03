@@ -125,7 +125,7 @@ const (
 
 type changeNotNullStmt struct {
 	column string
-	op notNullOperation
+	op     notNullOperation
 }
 
 // SetNotNull appends an ALTER COLUMN SET NOT NULL operation.
@@ -289,11 +289,20 @@ func (s AlterTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
 		panic(fmt.Errorf("ALTER TABLE %q must include at least one operation", s.table))
 	}
 	w.WriteString("ALTER TABLE ")
+	w.WriteString(s.table)
+	w.WriteString(" ")
 
 	for i, op := range s.operations {
+		if i == 0 {
+			if !isSQLite(d) {
+				w.WriteString("\n")
+			}
+		}
 		if i > 0 {
 			if isSQLite(d) {
 				w.WriteString(";\nALTER TABLE ")
+				w.WriteString(s.table)
+				w.WriteString(" ")
 			} else {
 				w.WriteString(",\n    ")
 			}

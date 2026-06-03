@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SennovE/qrafter/ddl/expr"
 	"github.com/SennovE/qrafter/dialect"
 )
 
@@ -84,11 +83,11 @@ func (c unique) Render(table string, name *string, w *strings.Builder, d dialect
 }
 
 type check struct {
-	expr expr.CheckExperssion
+	expr Predicater
 }
 
 // Check creates a table-level CHECK constraint.
-func Check(expr expr.CheckExperssion) Constraint[check] {
+func Check(expr Predicater) Constraint[check] {
 	return Constraint[check]{c: check{expr: expr}}
 }
 

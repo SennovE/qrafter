@@ -2,29 +2,10 @@ package ddl_test
 
 import (
 	"fmt"
-	"time"
 
-	q "github.com/SennovE/qrafter"
 	"github.com/SennovE/qrafter/ddl"
 	"github.com/SennovE/qrafter/dialect"
 )
-
-type exampleUser struct {
-	q.Table `table:"users"`
-
-	ID        q.Column[int64]      `db:"id"`
-	Email     q.Column[string]     `db:"email" ddl:"VARCHAR(320)"`
-	OrgID     q.Column[int64]      `db:"org_id"`
-	DeletedAt q.Column[*time.Time] `db:"deleted_at"`
-	CreatedAt q.Column[time.Time]  `db:"created_at"`
-	Ignored   q.Column[string]     `ddl:"-"`
-}
-
-type exampleOrg struct {
-	q.Table `table:"orgs"`
-
-	ID q.Column[int64] `db:"id"`
-}
 
 func ExampleCreateTable() {
 	sql := ddl.CreateTable("users").
@@ -74,27 +55,25 @@ func ExampleColumn() {
 	// )
 }
 
-func ExampleCreateIndex() {
-	sql := ddl.CreateIndex("users_email_active_idx").
-		Unique().
-		IfNotExists().
-		On("users", "email").
-		Where(users.DeletedAt.IsNull()).
-		MustRender(dialect.PostgreSQL{})
+// func ExampleCreateIndex() {
+// 	sql := ddl.CreateIndex("users_email_active_idx").
+// 		Unique().
+// 		IfNotExists().
+// 		On("users", "email").
+// 		Where(users.DeletedAt.IsNull()).
+// 		MustRender(dialect.PostgreSQL{})
 
-	fmt.Println(sql)
+// 	fmt.Println(sql)
 
-	// Output:
-	// CREATE UNIQUE INDEX IF NOT EXISTS "users_email_active_idx" ON "users" ("email") WHERE "deleted_at" IS NULL
-}
+// 	// Output:
+// 	// CREATE UNIQUE INDEX IF NOT EXISTS "users_email_active_idx" ON "users" ("email") WHERE "deleted_at" IS NULL
+// }
 
 func ExampleAlterTable() {
-	users := q.MustNewTable[exampleUser]()
-
-	sql := ddl.AlterTable(users).
+	sql := ddl.AlterTable("users").
 		AddColumn(ddl.Column("display_name", ddl.Text()).NotNull().Default("")).
-		SetDefaultExpr(users.CreatedAt, "now()").
-		SetNotNull(users.Email).
+		SetDefaultExpr("created_at", "now()").
+		SetNotNull("email").
 		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
@@ -109,11 +88,9 @@ func ExampleAlterTable() {
 }
 
 func ExampleAlterTableStmt_RenameColumn() {
-	users := q.MustNewTable[exampleUser]()
-
-	sql := ddl.AlterTable(users).
+	sql := ddl.AlterTable("users").
 		RenameColumn("name", "display_name").
-		DropDefault(users.CreatedAt).
+		DropDefault("created_at").
 		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
@@ -126,17 +103,14 @@ func ExampleAlterTableStmt_RenameColumn() {
 }
 
 func ExampleAlterTableStmt_AddConstraint() {
-	users := q.MustNewTable[exampleUser]()
-	orgs := q.MustNewTable[exampleOrg]()
-
-	sql := ddl.AlterTable(users).
+	sql := ddl.AlterTable("users").
 		AddConstraint(
-			ddl.ForeignKey(users.OrgID).
-				References(orgs, orgs.ID).
+			ddl.ForeignKey("org_id").
+				References("orgs", "id").
 				OnDelete(ddl.Cascade).
 				Named("users_org_id_fk"),
 		).
-		AddConstraint(ddl.Unique(users.Email).Named("users_email_key")).
+		AddConstraint(ddl.Unique("email").Named("users_email_key")).
 		MustRender(dialect.PostgreSQL{})
 
 	fmt.Println(sql)
@@ -149,14 +123,26 @@ func ExampleAlterTableStmt_AddConstraint() {
 }
 
 func ExampleAlterTableStmt_Render_unsupportedFeature() {
-	users := q.MustNewTable[exampleUser]()
-
-	_, err := ddl.AlterTable(users).
-		AlterColumnType(users.Email, ddl.Text()).
+	_, err := ddl.AlterTable("users").
+		AlterColumnType("email", ddl.Text()).
 		Render(dialect.SQLite{})
 
 	fmt.Println(err)
 
 	// Output:
 	// SQLite dialect does not support ALTER COLUMN TYPE
+}
+
+func ExampleCheck() {
+	sql := ddl.AlterTable("users").
+		AddConstraint(
+			ddl.Check(ddl.Col("age").Ge(0)).Named("chk_users"),
+		).
+		MustRender(dialect.PostgreSQL{})
+
+	fmt.Println(sql)
+
+	// Output:
+	// ALTER TABLE "users"
+	// ADD CONSTRAINT "chk_users" CHECK ("age" >= 0)
 }

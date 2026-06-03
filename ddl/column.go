@@ -21,9 +21,9 @@ type ColumnDef struct {
 }
 
 type columnDefault struct {
-	isExpr   bool
-	value    any
-	expr     string
+	isExpr bool
+	value  any
+	expr   string
 }
 
 type columnCheck struct {
@@ -86,12 +86,11 @@ func (c ColumnDef) DefaultExpr(expr string) ColumnDef {
 // References adds a column-level foreign key reference.
 func (c ColumnDef) References(table string, columns ...string) ColumnDef {
 	c.references = &columnReferences{
-		table: table,
+		table:   table,
 		columns: columns,
 	}
 	return c
 }
-
 
 func (c ColumnDef) Render(w *strings.Builder, d dialect.Renderer) {
 	c.renderNameAndType(w, d)
