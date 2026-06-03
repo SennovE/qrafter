@@ -16,6 +16,10 @@ type Predicate struct {
 
 var _ core.Predicater = Predicate{}
 
+// Predicater is implemented by SQL boolean expressions that can be used in WHERE,
+// JOIN, HAVING, UPDATE, and DELETE predicates.
+type Predicater = core.Predicater
+
 func newPredicate(p core.Predicater) Predicate {
 	return Predicate{predicater: p}
 }
@@ -86,6 +90,16 @@ func (e Expression) Ge(v any) Predicate {
 // Eq returns an equality predicate.
 func (e Expression) Eq(v any) Predicate {
 	return newPredicate(pred.Binary("=", e.selecter, asSelecter(v)))
+}
+
+// Like returns a LIKE predicate.
+func (e Expression) Like(v any) Predicate {
+	return newPredicate(pred.Binary("LIKE", e.selecter, asSelecter(v)))
+}
+
+// NotLike returns a NOT LIKE predicate.
+func (e Expression) NotLike(v any) Predicate {
+	return newPredicate(pred.Binary("NOT LIKE", e.selecter, asSelecter(v)))
 }
 
 // IsNull returns an IS NULL predicate.

@@ -32,6 +32,21 @@ type NodeStatus struct {
 	Status q.Column[string]
 }
 
+type filteredUser struct {
+	q.Table `table:"users"`
+
+	ID       q.Column[int] `db:"id"`
+	UserName q.Column[string]
+	Age      q.Column[int]
+	Status   q.Column[string]
+}
+
+type userFilter struct {
+	MinAge *int
+	Name   string
+	Status string
+}
+
 func ExampleSelect() {
 	users := q.MustNewTable[exampleUser]()
 
@@ -90,6 +105,37 @@ func ExampleUpdate() {
 	// WHERE "users"."id" = $2
 	// RETURNING "users"."id", "users"."user_name"
 	// [Alice 1]
+}
+
+func ExamplePredicates() {
+	users := q.MustNewTable[filteredUser]()
+	minAge := 18
+	filter := userFilter{
+		MinAge: &minAge,
+		Name:   "lic",
+		Status: "active",
+	}
+
+	predicates := q.Predicates(
+		q.WhenPtr(filter.MinAge, func(age int) q.Predicater {
+			return users.Age.Ge(age)
+		}),
+		q.When(filter.Name != "", users.UserName.Like("%"+filter.Name+"%")),
+		q.When(filter.Status != "", users.Status.Eq(filter.Status)),
+	)
+
+	sql, args := q.Select(users.ID, users.UserName).
+		Where(predicates...).
+		MustRender(dialect.PostgreSQL{})
+
+	fmt.Println(sql)
+	fmt.Println(args)
+
+	// Output:
+	// SELECT "users"."id", "users"."user_name"
+	// FROM "users"
+	// WHERE "users"."age" >= $1 AND "users"."user_name" LIKE $2 AND "users"."status" = $3
+	// [18 %lic% active]
 }
 
 func ExampleDelete() {

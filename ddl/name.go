@@ -20,30 +20,11 @@ func tableName(table any) string {
 	}
 }
 
-func columnName(column any) string {
-	switch v := column.(type) {
-	case string:
-		return requireName("column", v)
-	case q.ColumnRef:
-		return requireName("column", v.ColumnName())
-	default:
-		panic(fmt.Errorf("unsupported column identifier %T", column))
-	}
-}
-
 func requireName(kind, name string) string {
 	if name == "" {
 		panic(fmt.Errorf("%s name is empty", kind))
 	}
 	return name
-}
-
-func columnNames(columns []any) []string {
-	names := make([]string, 0, len(columns))
-	for _, column := range columns {
-		names = append(names, columnName(column))
-	}
-	return names
 }
 
 func renderColumnList(w *strings.Builder, d dialect.Renderer, columns []string) {

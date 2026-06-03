@@ -27,21 +27,18 @@ type exampleOrg struct {
 }
 
 func ExampleCreateTable() {
-	users := q.MustNewTable[exampleUser]()
-	orgs := q.MustNewTable[exampleOrg]()
-
-	sql := ddl.CreateTable(users).
+	sql := ddl.CreateTable("users").
 		IfNotExists().
 		Columns(
-			ddl.Column(users.ID, ddl.BigSerial()).PrimaryKey(),
-			ddl.Column(users.Email, ddl.VarChar(320)).NotNull(),
-			ddl.Column(users.OrgID, ddl.BigInt()),
-			ddl.Column(users.CreatedAt, ddl.TimestampTZ()).NotNull().DefaultExpr("now()"),
+			ddl.Column("id", ddl.BigSerial()).PrimaryKey(),
+			ddl.Column("email", ddl.VarChar(320)).NotNull(),
+			ddl.Column("org_id", ddl.BigInt()),
+			ddl.Column("created_at", ddl.TimestampTZ()).NotNull().DefaultExpr("now()"),
 		).
 		Constraints(
-			ddl.Unique(users.Email).Named("users_email_key"),
-			ddl.ForeignKey(users.OrgID).
-				References(orgs, orgs.ID).
+			ddl.Unique("email").Named("users_email_key"),
+			ddl.ForeignKey("org_id").
+				References("orgs", "id").
 				OnDelete(ddl.Cascade).
 				Named("users_org_id_fk"),
 		).
@@ -60,31 +57,10 @@ func ExampleCreateTable() {
 	// )
 }
 
-func ExampleCreateTableStmt_FromModel() {
-	users := q.MustNewTable[exampleUser]()
-
-	sql := ddl.CreateTable(users).
-		FromModel().
-		MustRender(dialect.PostgreSQL{})
-
-	fmt.Println(sql)
-
-	// Output:
-	// CREATE TABLE "users" (
-	//     "id" BIGINT,
-	//     "email" VARCHAR(320),
-	//     "org_id" BIGINT,
-	//     "deleted_at" TIMESTAMPTZ,
-	//     "created_at" TIMESTAMPTZ
-	// )
-}
-
 func ExampleColumn() {
-	users := q.MustNewTable[exampleUser]()
-
 	sql := ddl.CreateTable("email_archive").
 		Columns(
-			ddl.Column(users.Email, ddl.Text()),
+			ddl.Column("email", ddl.Text()),
 			ddl.Column("archived_at", ddl.TimestampTZ()).NotNull(),
 		).
 		MustRender(dialect.PostgreSQL{})
@@ -99,12 +75,10 @@ func ExampleColumn() {
 }
 
 func ExampleCreateIndex() {
-	users := q.MustNewTable[exampleUser]()
-
 	sql := ddl.CreateIndex("users_email_active_idx").
 		Unique().
 		IfNotExists().
-		On(users, users.Email).
+		On("users", "email").
 		Where(users.DeletedAt.IsNull()).
 		MustRender(dialect.PostgreSQL{})
 

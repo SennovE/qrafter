@@ -1,19 +1,13 @@
 package ddl
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
+	"github.com/SennovE/qrafter/ddl/expr"
 	"github.com/SennovE/qrafter/dialect"
-)
-
-type constraintKind string
-
-const (
-	constraintPrimaryKey constraintKind = "primary_key"
-	constraintUnique     constraintKind = "unique"
-	constraintCheck      constraintKind = "check"
-	constraintForeignKey constraintKind = "foreign_key"
 )
 
 // ReferenceAction is an ON DELETE or ON UPDATE action.
@@ -32,142 +26,155 @@ const (
 	SetDefault ReferenceAction = "SET DEFAULT"
 )
 
-// Constraint describes a table-level constraint.
-type Constraint struct {
-	state *constraintState
+type TableConstraint interface {
+	Render(table string, w *strings.Builder, d dialect.Renderer)
 }
 
-type constraintState struct {
-	name       string
-	kind       constraintKind
-	columns    []string
-	expr       string
-	refTable   string
-	refColumns []string
-	onDelete   ReferenceAction
-	onUpdate   ReferenceAction
+type constraintRenderer interface {
+	Render(table string, name *string, w *strings.Builder, d dialect.Renderer)
+}
+
+// Constraint describes a table-level constraint.
+type Constraint[T constraintRenderer] struct {
+	name *string
+	c    T
+}
+
+func (c Constraint[T]) Named(name string) Constraint[T] {
+	c.name = &name
+	return c
+}
+
+func (c Constraint[T]) Render(table string, w *strings.Builder, d dialect.Renderer) {
+	c.c.Render(table, c.name, w, d)
+}
+
+type primaryKey struct {
+	columns []string
 }
 
 // PrimaryKey creates a table-level PRIMARY KEY constraint.
-func PrimaryKey(columns ...any) Constraint {
-	return Constraint{state: &constraintState{kind: constraintPrimaryKey, columns: columnNames(columns)}}
+func PrimaryKey(columns ...string) Constraint[primaryKey] {
+	return Constraint[primaryKey]{c: primaryKey{columns: columns}}
+}
+
+func (c primaryKey) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
+	if name == nil {
+		genName := fmt.Sprintf("fk_%s_%s", table, strings.Join(c.columns, "_"))
+		name = &genName
+	}
+	renderConstraint(*name, "PRIMARY KEY", func() { renderColumnList(w, d, c.columns) }, w, d)
+}
+
+type unique struct {
+	columns []string
 }
 
 // Unique creates a table-level UNIQUE constraint.
-func Unique(columns ...any) Constraint {
-	return Constraint{state: &constraintState{kind: constraintUnique, columns: columnNames(columns)}}
+func Unique(columns ...string) Constraint[unique] {
+	return Constraint[unique]{c: unique{columns: columns}}
+}
+
+func (c unique) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
+	if name == nil {
+		genName := fmt.Sprintf("uq_%s_%s", table, strings.Join(c.columns, "_"))
+		name = &genName
+	}
+	renderConstraint(*name, "UNIQUE", func() { renderColumnList(w, d, c.columns) }, w, d)
+}
+
+type check struct {
+	expr expr.CheckExperssion
 }
 
 // Check creates a table-level CHECK constraint.
-func Check(expr string) Constraint {
-	return Constraint{state: &constraintState{kind: constraintCheck, expr: requireName("check expression", expr)}}
+func Check(expr expr.CheckExperssion) Constraint[check] {
+	return Constraint[check]{c: check{expr: expr}}
+}
+
+func (c check) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
+	var tmp strings.Builder
+	c.expr.Render(&tmp, d)
+	sql := tmp.String()
+	if name == nil {
+		fields := strings.Fields(strings.ToLower(sql))
+		normalized := strings.Join(fields, " ")
+		sum := sha1.Sum([]byte(normalized))
+		hsh := hex.EncodeToString(sum[:])[:8]
+		genName := fmt.Sprintf("chk_%s_%s", table, hsh)
+		name = &genName
+	}
+	renderConstraint(*name, "CHECK", func() { w.WriteString(sql) }, w, d)
+}
+
+type ForeignKeyConstraint struct {
+	Constraint[foreignKey]
+}
+
+type foreignKey struct {
+	srcCols  []string
+	refTable string
+	refCols  []string
+	onDelete *ReferenceAction
+	onUpdate *ReferenceAction
 }
 
 // ForeignKey creates a table-level FOREIGN KEY constraint.
-func ForeignKey(columns ...any) Constraint {
-	return Constraint{state: &constraintState{kind: constraintForeignKey, columns: columnNames(columns)}}
-}
-
-// Named names the constraint.
-func (c Constraint) Named(name string) Constraint {
-	state := c.currentState()
-	state.name = requireName("constraint", name)
-	return Constraint{state: &state}
+func ForeignKey(columns ...string) ForeignKeyConstraint {
+	return ForeignKeyConstraint{
+		Constraint: Constraint[foreignKey]{
+			c: foreignKey{
+				srcCols: columns,
+			},
+		},
+	}
 }
 
 // References sets the referenced table and columns for a FOREIGN KEY.
-func (c Constraint) References(table any, columns ...any) Constraint {
-	state := c.currentState()
-	state.refTable = tableName(table)
-	state.refColumns = columnNames(columns)
-	return Constraint{state: &state}
+func (c ForeignKeyConstraint) References(table string, columns ...string) ForeignKeyConstraint {
+	c.c.refTable = table
+	c.c.refCols = columns
+	return c
 }
 
 // OnDelete sets the foreign key ON DELETE action.
-func (c Constraint) OnDelete(action ReferenceAction) Constraint {
-	state := c.currentState()
-	state.onDelete = requireReferenceAction(action)
-	return Constraint{state: &state}
+func (c ForeignKeyConstraint) OnDelete(action ReferenceAction) ForeignKeyConstraint {
+	c.c.onDelete = &action
+	return c
 }
 
 // OnUpdate sets the foreign key ON UPDATE action.
-func (c Constraint) OnUpdate(action ReferenceAction) Constraint {
-	state := c.currentState()
-	state.onUpdate = requireReferenceAction(action)
-	return Constraint{state: &state}
+func (c ForeignKeyConstraint) OnUpdate(action ReferenceAction) ForeignKeyConstraint {
+	c.c.onUpdate = &action
+	return c
 }
 
-func requireReferenceAction(action ReferenceAction) ReferenceAction {
-	if action == "" {
-		panic(fmt.Errorf("reference action is empty"))
+func (c foreignKey) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
+	if len(c.srcCols) != len(c.refCols) {
+		panic("the number of columns on the left and right must match")
 	}
-	return action
-}
-
-func (c Constraint) render(w *strings.Builder, d dialect.Renderer) {
-	state := c.currentState()
-	if state.name != "" {
-		w.WriteString("CONSTRAINT ")
-		w.WriteString(d.QuoteIdent(state.name))
-		w.WriteString(" ")
+	if name == nil {
+		genName := fmt.Sprintf("fk_%s_%s_%s_%s", table, strings.Join(c.srcCols, "_"), c.refTable, strings.Join(c.refCols, "_"))
+		name = &genName
 	}
-
-	switch state.kind {
-	case constraintPrimaryKey:
-		renderNamedColumnConstraint(w, d, "PRIMARY KEY", state.columns)
-	case constraintUnique:
-		renderNamedColumnConstraint(w, d, "UNIQUE", state.columns)
-	case constraintCheck:
-		w.WriteString("CHECK (")
-		w.WriteString(state.expr)
-		w.WriteString(")")
-	case constraintForeignKey:
-		renderForeignKeyConstraint(w, d, &state)
-	default:
-		panic(fmt.Errorf("unsupported constraint kind %q", state.kind))
-	}
-}
-
-func (c Constraint) currentState() constraintState {
-	if c.state == nil {
-		return constraintState{}
-	}
-	return *c.state
-}
-
-func renderNamedColumnConstraint(w *strings.Builder, d dialect.Renderer, name string, columns []string) {
-	if len(columns) == 0 {
-		panic(fmt.Errorf("%s constraint must include at least one column", name))
-	}
-	w.WriteString(name)
-	w.WriteString(" (")
-	renderColumnList(w, d, columns)
+	renderConstraint(*name, "FOREIGN KEY", func() { renderColumnList(w, d, c.srcCols) }, w, d)
+	w.WriteString(" REFERENCES")
+	w.WriteString(c.refTable)
+	w.WriteString("(")
+	renderColumnList(w, d, c.refCols)
 	w.WriteString(")")
+	if c.onDelete != nil {
+		w.WriteString(" ON DELETE ")
+		w.WriteString(string(*c.onDelete))
+	}
+	if c.onUpdate != nil {
+		w.WriteString(" ON UPDATE ")
+		w.WriteString(string(*c.onUpdate))
+	}
 }
 
-func renderForeignKeyConstraint(w *strings.Builder, d dialect.Renderer, c *constraintState) {
-	if len(c.columns) == 0 {
-		panic(fmt.Errorf("FOREIGN KEY constraint must include at least one column"))
-	}
-	if c.refTable == "" {
-		panic(fmt.Errorf("FOREIGN KEY constraint must reference a table"))
-	}
-
-	w.WriteString("FOREIGN KEY (")
-	renderColumnList(w, d, c.columns)
-	w.WriteString(") REFERENCES ")
-	w.WriteString(d.QuoteIdent(c.refTable))
-	if len(c.refColumns) > 0 {
-		w.WriteString(" (")
-		renderColumnList(w, d, c.refColumns)
-		w.WriteString(")")
-	}
-	if c.onDelete != "" {
-		w.WriteString(" ON DELETE ")
-		w.WriteString(string(c.onDelete))
-	}
-	if c.onUpdate != "" {
-		w.WriteString(" ON UPDATE ")
-		w.WriteString(string(c.onUpdate))
-	}
+func renderConstraint(name string, typ string, dataRender func(), w *strings.Builder, d dialect.Renderer) {
+	fmt.Fprintf(w, "CONSTRAINT %s %s (", name, typ)
+	dataRender()
+	w.WriteString(")")
 }

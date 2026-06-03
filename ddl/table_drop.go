@@ -6,17 +6,24 @@ import (
 	"github.com/SennovE/qrafter/dialect"
 )
 
+type dropBehavior int
+
+const (
+	dropDefault dropBehavior = iota + 1
+	dropRestrict
+	dropCascade
+)
+
 // DropTableStmt builds a DROP TABLE statement.
 type DropTableStmt struct {
-	table    string
+	tables   []string
 	ifExists bool
-	cascade  bool
-	restrict bool
+	behavior dropBehavior
 }
 
 // DropTable starts a DROP TABLE statement.
-func DropTable(table any) DropTableStmt {
-	return DropTableStmt{table: tableName(table)}
+func DropTable(tables ...string) DropTableStmt {
+	return DropTableStmt{tables: tables, behavior: dropDefault}
 }
 
 // IfExists adds IF EXISTS.
@@ -27,15 +34,13 @@ func (s DropTableStmt) IfExists() DropTableStmt {
 
 // Cascade adds CASCADE.
 func (s DropTableStmt) Cascade() DropTableStmt {
-	s.cascade = true
-	s.restrict = false
+	s.behavior = dropCascade
 	return s
 }
 
 // Restrict adds RESTRICT.
 func (s DropTableStmt) Restrict() DropTableStmt {
-	s.restrict = true
-	s.cascade = false
+	s.behavior = dropRestrict
 	return s
 }
 
@@ -46,11 +51,11 @@ func (s DropTableStmt) Render(d dialect.Renderer) (string, error) {
 
 // MustRender is like Render but panics if rendering fails.
 func (s DropTableStmt) MustRender(d dialect.Renderer) string {
-	return mustRender(s.Render(d))
+	return mustRender(d, s.renderDDL)
 }
 
 func (s DropTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) && (s.cascade || s.restrict) {
+	if isSQLite(d) && s.behavior != dropDefault {
 		unsupported(d, "DROP TABLE CASCADE/RESTRICT")
 	}
 
@@ -58,11 +63,16 @@ func (s DropTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
 	if s.ifExists {
 		w.WriteString("IF EXISTS ")
 	}
-	w.WriteString(d.QuoteIdent(s.table))
-	if s.cascade {
-		w.WriteString(" CASCADE")
+	for i, t := range s.tables {
+		if i > 0 {
+			w.WriteString(", ")
+		}
+		w.WriteString(d.QuoteIdent(t))
 	}
-	if s.restrict {
+	switch s.behavior {
+	case dropCascade:
+		w.WriteString(" CASCADE")
+	case dropRestrict:
 		w.WriteString(" RESTRICT")
 	}
 }
