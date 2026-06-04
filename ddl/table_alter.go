@@ -1,20 +1,11 @@
 package ddl
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
-)
-
-type alterTableOpRenderer interface {
-	renderAlterTableOp(w *strings.Builder, d dialect.Renderer)
-}
+import "github.com/SennovE/qrafter/dialect"
 
 // AlterTableStmt builds ALTER TABLE statements.
 type AlterTableStmt struct {
 	table      string
-	operations []alterTableOpRenderer
+	operations []any
 }
 
 // AlterTable starts an ALTER TABLE statement.
@@ -31,13 +22,6 @@ type renameColumnStmt struct {
 func (s AlterTableStmt) RenameColumn(column, name string) AlterTableStmt {
 	s.operations = append(s.operations, renameColumnStmt{column: column, name: name})
 	return s
-}
-
-func (s renameColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("RENAME COLUMN ")
-	w.WriteString(d.QuoteIdent(s.column))
-	w.WriteString(" TO ")
-	w.WriteString(d.QuoteIdent(s.name))
 }
 
 type addColumnStmt struct {
@@ -57,14 +41,6 @@ func (s AlterTableStmt) AddColumnIfNotExists(column ColumnDef) AlterTableStmt {
 	return s
 }
 
-func (s addColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("ADD COLUMN ")
-	if s.ifNotExists {
-		w.WriteString("IF NOT EXISTS ")
-	}
-	s.column.Render(w, d)
-}
-
 type dropColumnStmt struct {
 	column   string
 	ifExists bool
@@ -82,14 +58,6 @@ func (s AlterTableStmt) DropColumnIfExists(column string) AlterTableStmt {
 	return s
 }
 
-func (s dropColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("DROP COLUMN ")
-	if s.ifExists {
-		w.WriteString("IF EXISTS ")
-	}
-	w.WriteString(d.QuoteIdent(s.column))
-}
-
 type alterColumnTypeStmt struct {
 	column string
 	typ    Type
@@ -99,22 +67,6 @@ type alterColumnTypeStmt struct {
 func (s AlterTableStmt) AlterColumnType(column string, typ Type) AlterTableStmt {
 	s.operations = append(s.operations, alterColumnTypeStmt{column: column, typ: typ})
 	return s
-}
-
-func (s alterColumnTypeStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	switch {
-	case isSQLite(d):
-		unsupported(d, "ALTER COLUMN TYPE")
-	case isMySQL(d):
-		w.WriteString("MODIFY COLUMN ")
-		w.WriteString(d.QuoteIdent(s.column))
-		w.WriteString(" ")
-	default:
-		w.WriteString("ALTER COLUMN ")
-		w.WriteString(d.QuoteIdent(s.column))
-		w.WriteString(" TYPE ")
-	}
-	w.WriteString(s.typ.render(d))
 }
 
 type notNullOperation int
@@ -141,20 +93,6 @@ func (s AlterTableStmt) DropNotNull(column string) AlterTableStmt {
 	return s
 }
 
-func (s changeNotNullStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) || isMySQL(d) {
-		unsupported(d, "ALTER COLUMN NULLABILITY")
-	}
-	w.WriteString("ALTER COLUMN ")
-	w.WriteString(d.QuoteIdent(s.column))
-	switch s.op {
-	case setNotNull:
-		w.WriteString(" SET NOT NULL")
-	case dropNotNull:
-		w.WriteString(" DROP NOT NULL")
-	}
-}
-
 type setDefaultStmt struct {
 	column string
 	isExpr bool
@@ -174,20 +112,6 @@ func (s AlterTableStmt) SetDefaultExpr(column, expr string) AlterTableStmt {
 	return s
 }
 
-func (s setDefaultStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) {
-		unsupported(d, "ALTER COLUMN DEFAULT")
-	}
-	w.WriteString("ALTER COLUMN ")
-	w.WriteString(d.QuoteIdent(s.column))
-	w.WriteString(" SET DEFAULT ")
-	if s.isExpr {
-		w.WriteString(s.expr)
-	} else {
-		w.WriteString(d.Literal(s.value))
-	}
-}
-
 type dropDefaultStmt struct {
 	column string
 }
@@ -196,15 +120,6 @@ type dropDefaultStmt struct {
 func (s AlterTableStmt) DropDefault(column string) AlterTableStmt {
 	s.operations = append(s.operations, dropDefaultStmt{column: column})
 	return s
-}
-
-func (s dropDefaultStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) {
-		unsupported(d, "ALTER COLUMN DEFAULT")
-	}
-	w.WriteString("ALTER COLUMN ")
-	w.WriteString(d.QuoteIdent(s.column))
-	w.WriteString(" DROP DEFAULT")
 }
 
 type addConstraintStmt struct {
@@ -216,14 +131,6 @@ type addConstraintStmt struct {
 func (s AlterTableStmt) AddConstraint(constraint TableConstraint) AlterTableStmt {
 	s.operations = append(s.operations, addConstraintStmt{table: s.table, c: constraint})
 	return s
-}
-
-func (s addConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) {
-		unsupported(d, "ALTER TABLE ADD CONSTRAINT")
-	}
-	w.WriteString("ADD ")
-	s.c.Render(s.table, w, d)
 }
 
 type dropConstraintStmt struct {
@@ -243,21 +150,6 @@ func (s AlterTableStmt) DropConstraintIfExists(name string) AlterTableStmt {
 	return s
 }
 
-func (s dropConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	switch {
-	case isSQLite(d):
-		unsupported(d, "ALTER TABLE DROP CONSTRAINT")
-	case isMySQL(d):
-		w.WriteString("DROP ")
-	default:
-		w.WriteString("DROP CONSTRAINT ")
-		if s.ifExists {
-			w.WriteString("IF EXISTS ")
-		}
-	}
-	w.WriteString(d.QuoteIdent(s.name))
-}
-
 type renameConstraintStmt struct {
 	column string
 	name   string
@@ -269,45 +161,12 @@ func (s AlterTableStmt) RenameConstraint(column, name string) AlterTableStmt {
 	return s
 }
 
-func (s renameConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("RENAME CONSTRAINT ")
-	w.WriteString(d.QuoteIdent(s.column))
-	w.WriteString(" TO ")
-	w.WriteString(d.QuoteIdent(s.name))
-}
-
 // Render renders the ALTER TABLE operations.
 func (s AlterTableStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s.renderDDL)
+	return render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.
 func (s AlterTableStmt) MustRender(d dialect.Renderer) string {
-	return mustRender(d, s.renderDDL)
-}
-
-func (s AlterTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
-	if len(s.operations) == 0 {
-		panic(fmt.Errorf("ALTER TABLE %q must include at least one operation", s.table))
-	}
-	w.WriteString("ALTER TABLE ")
-	w.WriteString(d.QuoteIdent(s.table))
-
-	for i, op := range s.operations {
-		if i == 0 {
-			if !isSQLite(d) {
-				w.WriteString("\n    ")
-			}
-		}
-		if i > 0 {
-			if isSQLite(d) {
-				w.WriteString(";\nALTER TABLE ")
-				w.WriteString(d.QuoteIdent(s.table))
-				w.WriteString(" ")
-			} else {
-				w.WriteString(",\n    ")
-			}
-		}
-		op.renderAlterTableOp(w, d)
-	}
+	return mustRender(d, s)
 }

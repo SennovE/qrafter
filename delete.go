@@ -1,8 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/clauses"
 	"github.com/SennovE/qrafter/internal/core"
@@ -64,23 +62,7 @@ func (q DeleteQuery) Render(d dialect.Renderer) (sql string, args []any, err err
 
 // MustRender is like Render but panics if the query is invalid.
 func (q DeleteQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
-	return renderStatement(d, q.CTEs(), q.RenderStatement)
-}
-
-// RenderStatement writes the DELETE query body.
-func (q DeleteQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-
-	dialect.RenderDeleteTarget(w, d, func() {
-		state.table.Render(w, d)
-	}, func() {
-		renderDeleteTargetName(w, d, state.table)
-	}, len(state.using) > 0, func() {
-		renderDeleteUsingTables(w, d, state.using)
-	})
-	renderDeleteUsing(w, d, state.using)
-	state.whereCl.Render(w, d)
-	renderReturning(w, d, state.returning)
+	return renderStatement(d, q.CTEs(), q)
 }
 
 // CTEs returns common table expressions referenced by the DELETE query.
@@ -129,22 +111,4 @@ func (s *deleteQueryState) addUsingTablesFrom(items []core.Predicater) {
 	for _, table := range sortedTablesFromSelecters(items) {
 		s.addUsing(table)
 	}
-}
-
-func renderDeleteUsing(w *strings.Builder, d dialect.Renderer, using []core.TableRef) {
-	if len(using) == 0 {
-		return
-	}
-
-	dialect.RenderDeleteUsing(w, d, func() {
-		renderDeleteUsingTables(w, d, using)
-	})
-}
-
-func renderDeleteUsingTables(w *strings.Builder, d dialect.Renderer, using []core.TableRef) {
-	core.RenderWithDelimiter(w, d, ", ", using)
-}
-
-func renderDeleteTargetName(w *strings.Builder, d dialect.Renderer, table core.TableRef) {
-	w.WriteString(d.QuoteIdent(table.SQLName()))
 }

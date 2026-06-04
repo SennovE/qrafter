@@ -1,9 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 )
 
@@ -48,13 +45,6 @@ func (c *Column[T]) Bind(name string, table core.TableRef) {
 // Tables returns the set containing the column's table reference.
 func (c Column[T]) Tables() core.TablesSet {
 	return core.TablesSet{c.table: struct{}{}}
-}
-
-// Render writes the fully qualified column name.
-func (c Column[T]) Render(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString(d.QuoteIdent(c.table.SQLName()))
-	w.WriteString(".")
-	w.WriteString(d.QuoteIdent(c.name))
 }
 
 func (c Column[T]) insertValue() any {

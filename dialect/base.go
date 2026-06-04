@@ -8,14 +8,26 @@ import (
 
 // Renderer renders SQL syntax that differs across database dialects.
 type Renderer interface {
+	// DialectName returns a user-facing dialect name.
+	DialectName() string
 	// QuoteIdent renders a SQL identifier.
 	QuoteIdent(ident string) string
 	// Literal renders an inline SQL literal.
 	Literal(value any) string
 	// Placeholder renders a bind placeholder for a one-based argument position.
 	Placeholder(position int) string
-	// LimitOffset renders dialect-specific LIMIT/OFFSET syntax.
-	LimitOffset(limit, offset int) string
+	// CompileNode lets a dialect override rendering for a specific compiler node.
+	CompileNode(c Compiler, node any) bool
+}
+
+// Compiler is the minimal surface dialects use to override node rendering.
+type Compiler interface {
+	Write(s string)
+	WriteInt(n int)
+	Compile(node any)
+	CompileList(nodes []any, delimiter string)
+	Unsupported(feature string)
+	Renderer() Renderer
 }
 
 // BaseDialect renders ANSI-style identifiers, literals, placeholders, and limits.
@@ -53,16 +65,7 @@ func (BaseDialect) Placeholder(_ int) string {
 	return "?"
 }
 
-// LimitOffset renders LIMIT and OFFSET clauses.
-func (BaseDialect) LimitOffset(limit, offset int) string {
-	switch {
-	case limit > 0 && offset > 0:
-		return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
-	case limit > 0:
-		return fmt.Sprintf("LIMIT %d", limit)
-	case offset > 0:
-		return fmt.Sprintf("OFFSET %d", offset)
-	default:
-		return ""
-	}
+// CompileNode returns false to use the default compiler implementation.
+func (BaseDialect) CompileNode(_ Compiler, _ any) bool {
+	return false
 }

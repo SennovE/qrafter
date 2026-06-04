@@ -1,9 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 )
 
@@ -64,11 +61,6 @@ func (cte CommonTableExpression) Column(name string) Column[any] {
 	return col
 }
 
-// Render writes the CTE declaration.
-func (cte CommonTableExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	cte.ref.Render(w, d)
-}
-
 // Union combines the CTE query with another query using UNION.
 func (cte CommonTableExpression) Union(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(cte, compoundUnion, other)
@@ -77,16 +69,6 @@ func (cte CommonTableExpression) Union(other core.QueryExpression) CompoundQuery
 // UnionAll combines the CTE query with another query using UNION ALL.
 func (cte CommonTableExpression) UnionAll(other core.QueryExpression) CompoundQuery {
 	return newCompoundQuery(cte, compoundUnionAll, other)
-}
-
-// RenderQueryExpression writes the CTE's underlying query expression.
-func (cte CommonTableExpression) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
-	cte.ref.Query.RenderQueryExpression(w, d)
-}
-
-// RenderSetOperand writes the CTE's underlying query as a set operand.
-func (cte CommonTableExpression) RenderSetOperand(w *strings.Builder, d dialect.Renderer) {
-	cte.ref.Query.RenderSetOperand(w, d)
 }
 
 // CTEs returns common table expressions referenced by the CTE's query.

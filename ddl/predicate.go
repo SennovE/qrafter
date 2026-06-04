@@ -1,11 +1,5 @@
 package ddl
 
-import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
-)
-
 const (
 	precedenceOr = iota + 1
 	precedenceAnd
@@ -15,71 +9,82 @@ const (
 	precedenceValue
 )
 
-type renderer interface {
-	Render(w *strings.Builder, d dialect.Renderer)
-}
-
-type precedencer interface {
-	precedence() int
-}
-
-func renderChild(r renderer, parentPrecedence int, parenthesizeOnEqual bool, w *strings.Builder, d dialect.Renderer) {
-	prec := precedenceValue
-	if p, ok := r.(precedencer); ok {
-		prec = p.precedence()
-	}
-	if prec < parentPrecedence || prec == parentPrecedence && parenthesizeOnEqual {
-		w.WriteString("(")
-		r.Render(w, d)
-		w.WriteString(")")
-		return
-	}
-	r.Render(w, d)
-}
-
-func infix(w *strings.Builder, d dialect.Renderer, a renderer, op string, b renderer, prec int, rightParenEqual bool) {
-	renderChild(a, prec, false, w, d)
-	w.WriteString(" ")
-	w.WriteString(op)
-	w.WriteString(" ")
-	renderChild(b, prec, rightParenEqual, w, d)
-}
-
 // Expression represents a SQL value expression inside a DDL predicate.
 type Expression struct {
-	render func(w *strings.Builder, d dialect.Renderer)
-	prec   int
+	node any
+	prec int
 }
 
-func expression(prec int, render func(w *strings.Builder, d dialect.Renderer)) Expression {
-	return Expression{render: render, prec: prec}
+type columnExpression struct {
+	name string
 }
 
-func asExpression(v any) renderer {
-	switch v := v.(type) {
-	case Expression:
-		return v
-	case renderer:
-		return v
-	default:
-		return Literal(v)
+type literalExpression struct {
+	value any
+}
+
+type rawExpression struct {
+	sql string
+}
+
+type functionExpression struct {
+	name string
+	args []Expression
+}
+
+type binaryExpression struct {
+	left                  Expression
+	op                    string
+	right                 Expression
+	prec                  int
+	parenthesizeRightPeer bool
+}
+
+// Predicate represents a SQL boolean predicate inside DDL.
+type Predicate struct {
+	node any
+	prec int
+}
+
+type binaryPredicate struct {
+	left  Expression
+	op    string
+	right Expression
+}
+
+type logicalPredicate struct {
+	op         string
+	predicates []Predicate
+	prec       int
+}
+
+type rawPredicate struct {
+	sql string
+}
+
+func expression(node any, prec int) Expression {
+	return Expression{node: node, prec: prec}
+}
+
+func predicate(node any, prec int) Predicate {
+	return Predicate{node: node, prec: prec}
+}
+
+func asExpression(v any) Expression {
+	if expr, ok := v.(Expression); ok {
+		return expr
 	}
+	return Literal(v)
 }
 
-// Render writes the SQL representation of the expression.
-func (e Expression) Render(w *strings.Builder, d dialect.Renderer) {
-	e.render(w, d)
-}
-
-func (e Expression) precedence() int {
-	return e.prec
-}
-
-func (e Expression) binary(op string, v any, prec int, rightParenEqual bool) Expression {
-	r := asExpression(v)
-	return expression(prec, func(w *strings.Builder, d dialect.Renderer) {
-		infix(w, d, e, op, r, prec, rightParenEqual)
-	})
+func (e Expression) binary(op string, v any, prec int, parenthesizeRightPeer bool) Expression {
+	return expression(binaryExpression{
+		left:                  e,
+		op:                    op,
+		right:                 asExpression(v),
+		prec:                  prec,
+		parenthesizeRightPeer: parenthesizeRightPeer,
+	}, prec)
 }
 
 // Add returns an addition expression.
@@ -96,89 +101,39 @@ func (e Expression) Div(v any) Expression { return e.binary("/", v, precedenceMu
 
 // Literal returns an expression rendered inline using the dialect's literal rules.
 func Literal(v any) Expression {
-	return expression(precedenceValue, func(w *strings.Builder, d dialect.Renderer) {
-		w.WriteString(d.Literal(v))
-	})
+	return expression(literalExpression{value: v}, precedenceValue)
 }
 
 // Func builds a SQL function call expression.
 func Func(name string, args ...any) Expression {
-	renderers := make([]renderer, len(args))
+	exprs := make([]Expression, len(args))
 	for i, arg := range args {
-		renderers[i] = asExpression(arg)
+		exprs[i] = asExpression(arg)
 	}
-	return expression(precedenceValue, func(w *strings.Builder, d dialect.Renderer) {
-		w.WriteString(name)
-		w.WriteString("(")
-		for i, arg := range renderers {
-			if i > 0 {
-				w.WriteString(", ")
-			}
-			arg.Render(w, d)
-		}
-		w.WriteString(")")
-	})
+	return expression(functionExpression{name: name, args: exprs}, precedenceValue)
 }
 
 // Col creates an unqualified column reference for DDL predicates.
 func Col(name string) Expression {
-	return expression(precedenceValue, func(w *strings.Builder, d dialect.Renderer) {
-		w.WriteString(d.QuoteIdent(name))
-	})
-}
-
-// Predicate represents a SQL boolean predicate inside DDL.
-type Predicate struct {
-	render func(w *strings.Builder, d dialect.Renderer)
-	prec   int
-}
-
-// Predicater is implemented by SQL boolean expressions used in DDL predicates.
-type Predicater interface {
-	Render(w *strings.Builder, d dialect.Renderer)
-	Predicate()
-}
-
-func predicate(prec int, render func(w *strings.Builder, d dialect.Renderer)) Predicate {
-	return Predicate{render: render, prec: prec}
-}
-
-// Predicate marks the value as a predicate.
-func (p Predicate) Predicate() {}
-
-// Render writes the SQL representation of the predicate.
-func (p Predicate) Render(w *strings.Builder, d dialect.Renderer) {
-	p.render(w, d)
-}
-
-func (p Predicate) precedence() int {
-	return p.prec
+	return expression(columnExpression{name: name}, precedenceValue)
 }
 
 // And combines predicates with SQL AND.
-func And(ps ...Predicater) Predicate { return logical("AND", precedenceAnd, ps) }
+func And(ps ...Predicate) Predicate {
+	return logical("AND", precedenceAnd, ps)
+}
 
 // Or combines predicates with SQL OR.
-func Or(ps ...Predicater) Predicate { return logical("OR", precedenceOr, ps) }
+func Or(ps ...Predicate) Predicate {
+	return logical("OR", precedenceOr, ps)
+}
 
-func logical(op string, prec int, ps []Predicater) Predicate {
-	return predicate(prec, func(w *strings.Builder, d dialect.Renderer) {
-		for i, p := range ps {
-			if i > 0 {
-				w.WriteString(" ")
-				w.WriteString(op)
-				w.WriteString(" ")
-			}
-			renderChild(p, prec, false, w, d)
-		}
-	})
+func logical(op string, prec int, ps []Predicate) Predicate {
+	return predicate(logicalPredicate{op: op, predicates: append([]Predicate(nil), ps...), prec: prec}, prec)
 }
 
 func (e Expression) compare(op string, v any) Predicate {
-	r := asExpression(v)
-	return predicate(precedenceComparison, func(w *strings.Builder, d dialect.Renderer) {
-		infix(w, d, e, op, r, precedenceComparison, false)
-	})
+	return predicate(binaryPredicate{left: e, op: op, right: asExpression(v)}, precedenceComparison)
 }
 
 // Lt returns a less-than predicate.
@@ -210,14 +165,10 @@ func (e Expression) IsNotNull() Predicate { return e.compare("IS NOT", Literal(n
 
 // RawExpr returns a SQL expression rendered verbatim.
 func RawExpr(sql string) Expression {
-	return expression(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
-		w.WriteString(sql)
-	})
+	return expression(rawExpression{sql: sql}, precedenceValue)
 }
 
 // RawPred returns a SQL predicate rendered verbatim.
 func RawPred(sql string) Predicate {
-	return predicate(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
-		w.WriteString(sql)
-	})
+	return predicate(rawPredicate{sql: sql}, precedenceValue)
 }

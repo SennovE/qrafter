@@ -17,6 +17,10 @@ func (c ConstExpression) Tables() core.TablesSet {
 	return nil
 }
 
+func (c ConstExpression) Value() any {
+	return c.v
+}
+
 func (c ConstExpression) Render(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString(d.Literal(c.v))
 }

@@ -1,7 +1,6 @@
 package dialect
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/SennovE/qrafter/internal/utils"
@@ -10,6 +9,8 @@ import (
 const (
 	mysqlOffsetOnlyLimit = "18446744073709551615"
 	mysqlDialectName     = "MySQL"
+	mysqlPartialIndex    = "PARTIAL INDEX"
+	alterColumnNullable  = "ALTER COLUMN NULLABILITY"
 )
 
 // MySQL renders qrafter queries using MySQL syntax.
@@ -31,96 +32,128 @@ func (MySQL) QuoteIdent(ident string) string {
 	return utils.QuoteWith(ident, "`")
 }
 
-// LimitOffset renders MySQL LIMIT/OFFSET clauses.
-func (MySQL) LimitOffset(limit, offset int) string {
-	switch {
-	case limit > 0 && offset > 0:
-		return fmt.Sprintf("LIMIT %d, %d", offset, limit)
-	case limit > 0:
-		return fmt.Sprintf("LIMIT %d", limit)
-	case offset > 0:
-		return fmt.Sprintf("LIMIT %s OFFSET %d", mysqlOffsetOnlyLimit, offset)
+// CompileNode renders MySQL-specific compiler nodes.
+func (MySQL) CompileNode(c Compiler, node any) bool {
+	return compileMySQLDML(c, node) || compileMySQLDDL(c, node)
+}
+
+func compileMySQLDML(c Compiler, node any) bool {
+	switch n := node.(type) {
+	case DefaultValues:
+		c.Write(" ()\nVALUES ()")
+		return true
+	case Returning:
+		c.Unsupported("RETURNING")
+		return true
+	case OrderItem:
+		return compileMySQLOrder(c, n)
+	case Join:
+		if strings.EqualFold(n.Type, "FULL JOIN") {
+			c.Unsupported("FULL JOIN")
+			return true
+		}
+		return false
+	case UpdateTarget:
+		c.Write("UPDATE ")
+		c.Compile(n.Target)
+		if len(n.From) > 0 {
+			c.Write(", ")
+			c.CompileList(n.From, ", ")
+		}
+		return true
+	case UpdateFrom:
+		return len(n.From) > 0
+	case DeleteTarget:
+		if len(n.Using) == 0 {
+			return false
+		}
+		c.Write("DELETE ")
+		c.Write(c.Renderer().QuoteIdent(n.TargetName))
+		c.Write("\nFROM ")
+		c.Compile(n.Target)
+		c.Write(", ")
+		c.CompileList(n.Using, ", ")
+		return true
+	case DeleteUsing:
+		return len(n.Using) > 0
 	default:
-		return ""
+		return false
 	}
 }
 
-// RenderDefaultValues renders MySQL's empty-row INSERT syntax.
-func (MySQL) RenderDefaultValues(w *strings.Builder) {
-	w.WriteString(" ()\nVALUES ()")
+func compileMySQLDDL(c Compiler, node any) bool {
+	switch n := node.(type) {
+	case PartialIndexPredicate:
+		c.Unsupported(mysqlPartialIndex)
+		return true
+	case AlterIndexRename:
+		if !n.HasTable {
+			panic("MySQL requires table name")
+		}
+		c.Write("ALTER TABLE ")
+		c.Write(c.Renderer().QuoteIdent(n.Table))
+		c.Write(" RENAME INDEX ")
+		c.Write(c.Renderer().QuoteIdent(n.OldName))
+		c.Write(" TO ")
+		c.Write(c.Renderer().QuoteIdent(n.NewName))
+		return true
+	case AlterColumnType:
+		c.Write("MODIFY COLUMN ")
+		c.Write(c.Renderer().QuoteIdent(n.Column))
+		c.Write(" ")
+		c.Write(n.Type)
+		return true
+	case AlterColumnNullability:
+		c.Unsupported(alterColumnNullable)
+		return true
+	case AlterTableDropConstraint:
+		c.Write("DROP ")
+		c.Write(c.Renderer().QuoteIdent(n.Name))
+		return true
+	case LimitOffset:
+		return compileMySQLLimitOffset(c, n)
+	default:
+		return false
+	}
 }
 
-// RenderReturning rejects RETURNING because MySQL does not support qrafter's
-// PostgreSQL-style RETURNING clause.
-func (MySQL) RenderReturning(_ *strings.Builder, _ func()) {
-	panic(UnsupportedFeatureError{Dialect: mysqlDialectName, Feature: "RETURNING"})
-}
-
-// RenderOrder renders NULLS FIRST/LAST through MySQL-compatible expressions.
-func (MySQL) RenderOrder(w *strings.Builder, renderExpr func(), direction, nulls string) {
-	if nulls == "" {
-		renderOrderDefault(w, renderExpr, direction, nulls)
-		return
+func compileMySQLOrder(c Compiler, n OrderItem) bool {
+	if n.Nulls == "" {
+		return false
 	}
 
-	renderExpr()
-	if strings.EqualFold(nulls, "FIRST") {
-		w.WriteString(" IS NOT NULL")
+	c.Compile(n.Expr)
+	if strings.EqualFold(n.Nulls, "FIRST") {
+		c.Write(" IS NOT NULL")
 	} else {
-		w.WriteString(" IS NULL")
+		c.Write(" IS NULL")
 	}
-	w.WriteString(", ")
-	renderExpr()
-	if direction != "" {
-		w.WriteString(" ")
-		w.WriteString(direction)
+	c.Write(", ")
+	c.Compile(n.Expr)
+	if n.Direction != "" {
+		c.Write(" ")
+		c.Write(n.Direction)
 	}
+	return true
 }
 
-// RenderJoin rejects FULL JOIN because MySQL has no native FULL JOIN syntax.
-func (MySQL) RenderJoin(w *strings.Builder, joinType string, renderTable, renderPredicates func()) {
-	if strings.EqualFold(joinType, "FULL JOIN") {
-		panic(UnsupportedFeatureError{Dialect: mysqlDialectName, Feature: "FULL JOIN"})
+func compileMySQLLimitOffset(c Compiler, n LimitOffset) bool {
+	switch {
+	case n.Limit > 0 && n.Offset > 0:
+		c.Write("\nLIMIT ")
+		c.WriteInt(n.Offset)
+		c.Write(", ")
+		c.WriteInt(n.Limit)
+	case n.Limit > 0:
+		c.Write("\nLIMIT ")
+		c.WriteInt(n.Limit)
+	case n.Offset > 0:
+		c.Write("\nLIMIT ")
+		c.Write(mysqlOffsetOnlyLimit)
+		c.Write(" OFFSET ")
+		c.WriteInt(n.Offset)
+	default:
+		return false
 	}
-	renderJoinDefault(w, joinType, renderTable, renderPredicates)
+	return true
 }
-
-// RenderUpdateTarget renders MySQL multi-table UPDATE syntax.
-func (MySQL) RenderUpdateTarget(w *strings.Builder, renderTarget func(), hasFrom bool, renderFrom func()) {
-	w.WriteString("UPDATE ")
-	renderTarget()
-	if hasFrom {
-		w.WriteString(", ")
-		renderFrom()
-	}
-}
-
-// RenderUpdateFrom is a no-op because MySQL renders UPDATE source tables in the
-// UPDATE table reference list.
-func (MySQL) RenderUpdateFrom(_ *strings.Builder, _ func()) {}
-
-// RenderDeleteTarget renders MySQL multi-table DELETE syntax.
-func (MySQL) RenderDeleteTarget(
-	w *strings.Builder,
-	renderTarget func(),
-	renderTargetName func(),
-	hasUsing bool,
-	renderUsing func(),
-) {
-	if !hasUsing {
-		w.WriteString("DELETE FROM ")
-		renderTarget()
-		return
-	}
-
-	w.WriteString("DELETE ")
-	renderTargetName()
-	w.WriteString("\nFROM ")
-	renderTarget()
-	w.WriteString(", ")
-	renderUsing()
-}
-
-// RenderDeleteUsing is a no-op because MySQL renders DELETE source tables in
-// the DELETE table reference list.
-func (MySQL) RenderDeleteUsing(_ *strings.Builder, _ func()) {}

@@ -148,3 +148,45 @@ func TestDDLAlterIndexRenamePostgreSQL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, `ALTER INDEX "users_email_idx" RENAME TO "users_email_key"`, sql)
 }
+
+func TestDDLCreateTableSQLServer(t *testing.T) {
+	sql, err := ddl.CreateTable("users").
+		Columns(
+			ddl.Column("id", ddl.BigSerial()).PrimaryKey(),
+			ddl.Column("name", ddl.Text()).NotNull(),
+			ddl.Column("active", ddl.Boolean()).Default(true),
+		).
+		Render(dialect.SQLServer{})
+
+	require.NoError(t, err)
+	assert.Equal(t, "CREATE TABLE [users] (\n    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,\n    [name] NVARCHAR(MAX) NOT NULL,\n    [active] BIT DEFAULT 1\n)", sql)
+}
+
+func TestDDLOracleDropTableCascade(t *testing.T) {
+	sql, err := ddl.DropTable("users").
+		Cascade().
+		Render(dialect.Oracle{})
+
+	require.NoError(t, err)
+	assert.Equal(t, `DROP TABLE "users" CASCADE CONSTRAINTS`, sql)
+}
+
+func TestDDLOracleAlterColumnType(t *testing.T) {
+	sql, err := ddl.AlterTable("users").
+		AlterColumnType("name", ddl.Text()).
+		Render(dialect.Oracle{})
+
+	require.NoError(t, err)
+	assert.Equal(t, `ALTER TABLE "users"
+    MODIFY "name" CLOB`, sql)
+}
+
+func TestDDLAlterIndexRenameMySQL(t *testing.T) {
+	sql, err := ddl.AlterIndex("users_email_idx").
+		OnTable("users").
+		Rename("users_email_key").
+		Render(dialect.MySQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, "ALTER TABLE `users` RENAME INDEX `users_email_idx` TO `users_email_key`", sql)
+}

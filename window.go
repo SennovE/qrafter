@@ -2,9 +2,7 @@ package qrafter
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/expr"
 	"github.com/SennovE/qrafter/internal/utils"
@@ -151,26 +149,6 @@ func FrameBound(value string) WindowFrameBound {
 	return WindowFrameBound{value: value}
 }
 
-// Render writes the SQL window frame.
-func (f WindowFrame) Render(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString(f.mode)
-	if f.end != nil {
-		w.WriteString(" BETWEEN ")
-		f.start.Render(w, d)
-		w.WriteString(" AND ")
-		f.end.Render(w, d)
-		return
-	}
-
-	w.WriteString(" ")
-	f.start.Render(w, d)
-}
-
-// Render writes the SQL window frame bound.
-func (b WindowFrameBound) Render(w *strings.Builder, _ dialect.Renderer) {
-	w.WriteString(b.value)
-}
-
 // Tables returns table references used by the window specification.
 func (s WindowSpec) Tables() core.TablesSet {
 	tables := make([]core.TablesSet, 0, len(s.partitionBy)+len(s.orderBy))
@@ -183,44 +161,8 @@ func (s WindowSpec) Tables() core.TablesSet {
 	return utils.UnionSets(tables...)
 }
 
-// Render writes the SQL window specification.
-func (s WindowSpec) Render(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("(")
-
-	rendered := false
-	if len(s.partitionBy) > 0 {
-		w.WriteString("PARTITION BY ")
-		core.RenderWithDelimiter(w, d, ", ", s.partitionBy)
-		rendered = true
-	}
-
-	if len(s.orderBy) > 0 {
-		if rendered {
-			w.WriteString(" ")
-		}
-		w.WriteString("ORDER BY ")
-		core.RenderWithDelimiter(w, d, ", ", s.orderBy)
-		rendered = true
-	}
-
-	if s.frame != nil {
-		if rendered {
-			w.WriteString(" ")
-		}
-		s.frame.Render(w, d)
-	}
-
-	w.WriteString(")")
-}
-
 func (e windowExpression) Tables() core.TablesSet {
 	return utils.UnionSets(e.expr.Tables(), e.spec.Tables())
-}
-
-func (e windowExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	e.expr.Render(w, d)
-	w.WriteString(" OVER ")
-	e.spec.Render(w, d)
 }
 
 // Over returns an expression with an OVER clause.

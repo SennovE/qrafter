@@ -2,7 +2,6 @@ package qrafter
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/clauses"
@@ -12,8 +11,6 @@ import (
 type cteCollector struct {
 	ctes []*core.CTERef
 }
-
-type statementBodyRenderer func(w *strings.Builder, d dialect.Renderer)
 
 type queryRenderer func() (sql string, args []any)
 
@@ -37,39 +34,24 @@ func panicToError(value any) error {
 	return fmt.Errorf("%v", value)
 }
 
-func renderStatement(d dialect.Renderer, ctes []*core.CTERef, renderBody statementBodyRenderer) (sql string, args []any) {
-	return renderStatementWithClause(d, clauses.WithClause{}, ctes, renderBody)
+func renderStatement(d dialect.Renderer, ctes []*core.CTERef, node any) (sql string, args []any) {
+	return renderStatementWithClause(d, clauses.WithClause{}, ctes, node)
 }
 
 func renderStatementWithClause(
 	d dialect.Renderer,
 	withCl clauses.WithClause,
 	ctes []*core.CTERef,
-	renderBody statementBodyRenderer,
+	node any,
 ) (sql string, args []any) {
-	renderer := core.NewArgsRenderer(d)
-	var w strings.Builder
+	compiler := newCompiler(d)
 
 	withCl = withCl.WithClauseFor(cteCollector{ctes: ctes})
-	withCl.Render(&w, renderer)
-	renderBody(&w, renderer)
+	compiler.Compile(withCl)
+	compiler.Compile(node)
 
-	return w.String(), renderer.Args()
+	return compiler.SQL(), compiler.Args()
 }
-
-func renderReturning(w *strings.Builder, d dialect.Renderer, returning []core.Selecter) {
-	if len(returning) == 0 {
-		return
-	}
-
-	dialect.RenderReturning(w, d, func() {
-		core.RenderWithDelimiter(w, d, ", ", returning)
-	})
-}
-
-func (c cteCollector) RenderQueryExpression(_ *strings.Builder, _ dialect.Renderer) {}
-
-func (c cteCollector) RenderSetOperand(_ *strings.Builder, _ dialect.Renderer) {}
 
 func (c cteCollector) CTEs() []*core.CTERef {
 	return c.ctes

@@ -2,7 +2,6 @@ package qrafter
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
@@ -179,29 +178,7 @@ func (q InsertQuery) Render(d dialect.Renderer) (sql string, args []any, err err
 
 // MustRender is like Render but panics if the query is invalid.
 func (q InsertQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
-	return renderStatement(d, q.CTEs(), q.RenderStatement)
-}
-
-// RenderStatement writes the INSERT query body.
-func (q InsertQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-
-	w.WriteString("INSERT INTO ")
-	state.table.Render(w, d)
-	renderInsertColumns(w, d, state.columns)
-
-	switch {
-	case state.defaultValues || state.source == nil && len(state.rows) == 0:
-		dialect.RenderDefaultValues(w, d)
-	case state.source != nil:
-		w.WriteString("\n")
-		state.source.RenderQueryExpression(w, d)
-	default:
-		w.WriteString("\nVALUES ")
-		renderInsertRows(w, d, state.rows)
-	}
-
-	renderReturning(w, d, state.returning)
+	return renderStatement(d, q.CTEs(), q)
 }
 
 // CTEs returns common table expressions referenced by the INSERT source.
@@ -238,32 +215,6 @@ func cloneInsertRows(rows [][]core.Selecter) [][]core.Selecter {
 		cloned[i] = append([]core.Selecter(nil), row...)
 	}
 	return cloned
-}
-
-func renderInsertColumns(w *strings.Builder, d dialect.Renderer, columns []ColumnRef) {
-	if len(columns) == 0 {
-		return
-	}
-
-	w.WriteString(" (")
-	for i, column := range columns {
-		if i > 0 {
-			w.WriteString(", ")
-		}
-		w.WriteString(d.QuoteIdent(column.ColumnName()))
-	}
-	w.WriteString(")")
-}
-
-func renderInsertRows(w *strings.Builder, d dialect.Renderer, rows [][]core.Selecter) {
-	for i, row := range rows {
-		if i > 0 {
-			w.WriteString(", ")
-		}
-		w.WriteString("(")
-		core.RenderWithDelimiter(w, d, ", ", row)
-		w.WriteString(")")
-	}
 }
 
 func reflectColumnValueRows(rows any) [][]reflectedColumnValue {

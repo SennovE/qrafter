@@ -2,10 +2,8 @@ package ddl
 
 import (
 	"fmt"
-	"strings"
 
 	q "github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/dialect"
 )
 
 func tableName(table any) string {
@@ -25,13 +23,4 @@ func requireName(kind, name string) string {
 		panic(fmt.Errorf("%s name is empty", kind))
 	}
 	return name
-}
-
-func renderColumnList(w *strings.Builder, d dialect.Renderer, columns []string) {
-	for i, column := range columns {
-		if i > 0 {
-			w.WriteString(", ")
-		}
-		w.WriteString(d.QuoteIdent(column))
-	}
 }

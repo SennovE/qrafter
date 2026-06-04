@@ -24,7 +24,8 @@ go run ./examples/reporting
 ## schema
 
 `schema` renders a small schema plan with tables, constraints, indexes, and an
-ALTER TABLE statement:
+ALTER TABLE statement. The same builders can be rendered with any included
+dialect, including PostgreSQL, MySQL, SQLite, Oracle, and SQL Server:
 
 ```sh
 go run ./examples/schema

@@ -1,8 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/clauses"
 	"github.com/SennovE/qrafter/internal/core"
@@ -150,42 +148,7 @@ func (q SelectQuery) Render(d dialect.Renderer) (sql string, args []any, err err
 // MustRender is like Render but panics if the query is invalid.
 func (q SelectQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
 	state := q.currentState()
-	return renderStatementWithClause(d, state.withCl, q.CTEs(), q.RenderStatement)
-}
-
-// RenderStatement writes the SELECT query body.
-func (q SelectQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
-	q.RenderQueryExpression(w, d)
-}
-
-// RenderQueryExpression writes the SELECT query body.
-func (q SelectQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-	cls := []clauses.Clauser{
-		state.selectCl,
-		state.fromCl,
-		state.whereCl,
-		state.groupByCl,
-		state.havingCl,
-		state.orderByCl,
-		state.limitOffsetCl,
-	}
-
-	for _, cl := range cls {
-		cl.Render(w, d)
-	}
-}
-
-// RenderSetOperand writes the query as an operand in a set operation.
-func (q SelectQuery) RenderSetOperand(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-	if len(state.orderByCl.Items) > 0 || state.limitOffsetCl.Limit != 0 || state.limitOffsetCl.Offset != 0 {
-		w.WriteString("(")
-		q.RenderQueryExpression(w, d)
-		w.WriteString(")")
-		return
-	}
-	q.RenderQueryExpression(w, d)
+	return renderStatementWithClause(d, state.withCl, q.CTEs(), q)
 }
 
 // CTEs returns common table expressions referenced by the query.

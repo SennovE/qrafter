@@ -1,9 +1,6 @@
 package expr
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 )
 
@@ -17,12 +14,8 @@ func (a ArgExpression) Tables() core.TablesSet {
 	return nil
 }
 
-func (a ArgExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	if renderer, ok := d.(core.ArgRenderer); ok {
-		w.WriteString(renderer.AddArg(a.v))
-		return
-	}
-	w.WriteString(d.Literal(a.v))
+func (a ArgExpression) Value() any {
+	return a.v
 }
 
 func Param(value any) ArgExpression {

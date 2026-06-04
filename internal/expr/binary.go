@@ -1,10 +1,6 @@
 package expr
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -16,10 +12,16 @@ type BinaryExpression struct {
 
 var _ core.Selecter = BinaryExpression{}
 
-func (e BinaryExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	core.RenderChild(e.a, e.Precedence(), false, w, d)
-	fmt.Fprintf(w, " %s ", e.op)
-	core.RenderChild(e.b, e.Precedence(), e.parenthesizeRightPeer(), w, d)
+func (e BinaryExpression) Left() core.Selecter {
+	return e.a
+}
+
+func (e BinaryExpression) Right() core.Selecter {
+	return e.b
+}
+
+func (e BinaryExpression) Op() string {
+	return e.op
 }
 
 func (e BinaryExpression) Precedence() int {
@@ -30,15 +32,6 @@ func (e BinaryExpression) Precedence() int {
 		return core.PrecedenceAdditive
 	default:
 		return core.PrecedenceComparison
-	}
-}
-
-func (e BinaryExpression) parenthesizeRightPeer() bool {
-	switch e.op {
-	case "-", "/", "%":
-		return true
-	default:
-		return false
 	}
 }
 

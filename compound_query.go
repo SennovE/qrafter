@@ -1,8 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/clauses"
 	"github.com/SennovE/qrafter/internal/core"
@@ -104,33 +102,7 @@ func (q CompoundQuery) Render(d dialect.Renderer) (sql string, args []any, err e
 
 // MustRender is like Render but panics if the query is invalid.
 func (q CompoundQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
-	renderer := core.NewArgsRenderer(d)
-	var w strings.Builder
-
-	withCl := clauses.WithClause{}.WithClauseFor(q)
-	withCl.Render(&w, renderer)
-	q.RenderQueryExpression(&w, renderer)
-
-	return w.String(), renderer.Args()
-}
-
-// RenderQueryExpression writes the compound query body.
-func (q CompoundQuery) RenderQueryExpression(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-	state.left.RenderSetOperand(w, d)
-	w.WriteString("\n")
-	w.WriteString(state.operator.String())
-	w.WriteString("\n")
-	state.right.RenderSetOperand(w, d)
-	state.orderByCl.Render(w, d)
-	state.limitOffsetCl.Render(w, d)
-}
-
-// RenderSetOperand writes the compound query as a parenthesized set operand.
-func (q CompoundQuery) RenderSetOperand(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("(")
-	q.RenderQueryExpression(w, d)
-	w.WriteString(")")
+	return renderStatementWithClause(d, clauses.WithClause{}, q.CTEs(), q)
 }
 
 // CTEs returns common table expressions referenced by the compound query.

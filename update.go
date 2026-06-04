@@ -1,8 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/clauses"
 	"github.com/SennovE/qrafter/internal/core"
@@ -104,22 +102,7 @@ func (q UpdateQuery) Render(d dialect.Renderer) (sql string, args []any, err err
 
 // MustRender is like Render but panics if the query is invalid.
 func (q UpdateQuery) MustRender(d dialect.Renderer) (sql string, args []any) {
-	return renderStatement(d, q.CTEs(), q.RenderStatement)
-}
-
-// RenderStatement writes the UPDATE query body.
-func (q UpdateQuery) RenderStatement(w *strings.Builder, d dialect.Renderer) {
-	state := q.currentState()
-
-	dialect.RenderUpdateTarget(w, d, func() {
-		state.table.Render(w, d)
-	}, len(state.from) > 0, func() {
-		renderUpdateFromTables(w, d, state.from)
-	})
-	renderUpdateAssignments(w, d, state.assignments)
-	renderUpdateFrom(w, d, state.from)
-	state.whereCl.Render(w, d)
-	renderReturning(w, d, state.returning)
+	return renderStatement(d, q.CTEs(), q)
 }
 
 // CTEs returns common table expressions referenced by the UPDATE query.
@@ -170,32 +153,6 @@ func (s *updateQueryState) addFromTables(tables []core.TableRef) {
 	for _, table := range tables {
 		s.addFrom(table)
 	}
-}
-
-func renderUpdateAssignments(w *strings.Builder, d dialect.Renderer, assignments []updateAssignment) {
-	w.WriteString("\nSET ")
-	for i, assignment := range assignments {
-		if i > 0 {
-			w.WriteString(", ")
-		}
-		w.WriteString(d.QuoteIdent(assignment.column.ColumnName()))
-		w.WriteString(" = ")
-		assignment.value.Render(w, d)
-	}
-}
-
-func renderUpdateFrom(w *strings.Builder, d dialect.Renderer, from []core.TableRef) {
-	if len(from) == 0 {
-		return
-	}
-
-	dialect.RenderUpdateFrom(w, d, func() {
-		renderUpdateFromTables(w, d, from)
-	})
-}
-
-func renderUpdateFromTables(w *strings.Builder, d dialect.Renderer, from []core.TableRef) {
-	core.RenderWithDelimiter(w, d, ", ", from)
 }
 
 func appendCTEsFromUpdateAssignments(ctes []*core.CTERef, seen map[string]struct{}, assignments []updateAssignment) []*core.CTERef {

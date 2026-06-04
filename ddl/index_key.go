@@ -1,12 +1,5 @@
 package ddl
 
-import (
-	"strconv"
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
-)
-
 type sortDirection string
 
 const (
@@ -102,41 +95,6 @@ func (k IndexKey) PrefixLength(n int) IndexKey {
 	options.length = n
 	k.options = options
 	return k
-}
-
-// Render writes the SQL representation of the index key.
-func (k IndexKey) Render(w *strings.Builder, d dialect.Renderer) {
-	k.expr.Render(w, d)
-
-	if k.options == nil {
-		return
-	}
-
-	if k.options.length > 0 {
-		w.WriteString("(")
-		w.WriteString(strconv.Itoa(k.options.length))
-		w.WriteString(")")
-	}
-
-	if k.options.collation != "" {
-		w.WriteString(" COLLATE ")
-		w.WriteString(d.QuoteIdent(k.options.collation))
-	}
-
-	if k.options.opclass != "" {
-		w.WriteString(" ")
-		w.WriteString(k.options.opclass)
-	}
-
-	if k.options.sort != "" {
-		w.WriteString(" ")
-		w.WriteString(string(k.options.sort))
-	}
-
-	if k.options.nulls != "" {
-		w.WriteString(" NULLS ")
-		w.WriteString(string(k.options.nulls))
-	}
 }
 
 func (k IndexKey) cloneOptions() *indexKeyOptions {

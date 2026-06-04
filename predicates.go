@@ -1,9 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/expr"
 	"github.com/SennovE/qrafter/internal/pred"
@@ -38,11 +35,6 @@ func unwrapPredicates(ps []core.Predicater) []core.Predicater {
 
 // Predicate marks the value as a predicate.
 func (p Predicate) Predicate() {}
-
-// Render writes the SQL representation of the predicate.
-func (p Predicate) Render(w *strings.Builder, d dialect.Renderer) {
-	p.predicater.Render(w, d)
-}
 
 // Tables returns table references used by the predicate.
 func (p Predicate) Tables() core.TablesSet {

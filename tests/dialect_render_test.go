@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	q "github.com/SennovE/qrafter"
+	"github.com/SennovE/qrafter/ddl"
 	"github.com/SennovE/qrafter/dialect"
 	"github.com/stretchr/testify/assert"
 )
@@ -168,4 +169,65 @@ func TestSQLiteDialectRender_UnsupportedDeleteUsing(t *testing.T) {
 
 	var unsupported dialect.UnsupportedFeatureError
 	assert.ErrorAs(t, err, &unsupported)
+}
+
+func TestSQLServerDialectRender(t *testing.T) {
+	users := q.MustNewTable[User]()
+
+	sql, args := q.Select(users.UserName).
+		Where(users.Age.Ge(18)).
+		OrderBy(users.UserName.Asc().NullsLast()).
+		Limit(5).
+		Offset(10).
+		MustRender(dialect.SQLServer{})
+
+	assert.Equal(t, `SELECT [table].[user_name]
+FROM [table]
+WHERE [table].[userAge] >= @p1
+ORDER BY CASE WHEN [table].[user_name] IS NULL THEN 1 ELSE 0 END, [table].[user_name] ASC
+OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY`, sql)
+	assert.Equal(t, []any{18}, args)
+	assert.Equal(t, "[weird]]name]", dialect.SQLServer{}.QuoteIdent("weird]name"))
+}
+
+func TestSQLServerDialectRender_UnsupportedReturning(t *testing.T) {
+	users := q.MustNewTable[User]()
+
+	_, _, err := q.Insert(users).
+		Columns(users.UserName).
+		Values("Alice").
+		Returning(users.UserName).
+		Render(dialect.SQLServer{})
+
+	var unsupported dialect.UnsupportedFeatureError
+	assert.ErrorAs(t, err, &unsupported)
+	assert.Equal(t, "SQL Server", unsupported.Dialect)
+	assert.Equal(t, "RETURNING", unsupported.Feature)
+}
+
+func TestOracleDialectRender(t *testing.T) {
+	users := q.MustNewTable[User]()
+
+	sql, args := q.Select(q.Literal(true), users.UserName).
+		Where(users.Age.Ge(18)).
+		Limit(5).
+		MustRender(dialect.Oracle{})
+
+	assert.Equal(t, `SELECT 1, "table"."user_name"
+FROM "table"
+WHERE "table"."userAge" >= :1
+FETCH FIRST 5 ROWS ONLY`, sql)
+	assert.Equal(t, []any{18}, args)
+}
+
+func TestOracleDialectRender_UnsupportedPartialIndex(t *testing.T) {
+	_, err := ddl.CreateIndex("users_email_active_idx").
+		OnCols("users", "email").
+		Where(ddl.Col("deleted_at").IsNull()).
+		Render(dialect.Oracle{})
+
+	var unsupported dialect.UnsupportedFeatureError
+	assert.ErrorAs(t, err, &unsupported)
+	assert.Equal(t, "Oracle", unsupported.Dialect)
+	assert.Equal(t, "PARTIAL INDEX", unsupported.Feature)
 }

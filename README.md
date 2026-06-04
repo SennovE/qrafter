@@ -153,6 +153,7 @@ Less ideal fits:
 * Compound queries such as `UNION` and `UNION ALL`
 * Aggregates and window functions
 * DDL builders for tables, columns, constraints, and indexes
+* Centralized SQL compiler with dialect override hooks for database-specific syntax
 * `database/sql` and `sqlx`-friendly scanning helpers
 
 ## DDL
@@ -205,11 +206,21 @@ qrafter currently includes:
   empty-row inserts, multi-table `UPDATE`/`DELETE`, and NULL ordering emulation
 * `dialect.SQLite` for SQLite literals, `LIMIT`/`OFFSET`, and fail-fast
   handling for unsupported `DELETE USING`
+* `dialect.Oracle` for Oracle placeholders, boolean literals,
+  `OFFSET`/`FETCH`, and Oracle-specific DDL overrides
+* `dialect.SQLServer` for bracket-quoted identifiers, `@p1` placeholders,
+  `OFFSET`/`FETCH`, NULL ordering emulation, and SQL Server DDL overrides
 
-Dialect support is built from small rendering hooks. New dialects can start with
-identifier quoting, literals, placeholders, and `LIMIT`/`OFFSET`, then override
-focused feature hooks for clauses such as `RETURNING`, `UPDATE` sources,
-`DELETE` sources, joins, default inserts, and NULL ordering.
+Rendering is intentionally centralized. Query and DDL builders store statement
+state; the compiler renders statements, expressions, clauses, and DDL nodes; a
+dialect supplies primitive rules such as identifier quoting, literals,
+placeholders, and `LIMIT`/`OFFSET`, and can override specific compiler nodes
+with `CompileNode`.
+
+New dialects can start with the primitive methods and then override focused
+nodes for features such as `RETURNING`, `UPDATE` sources, `DELETE` sources,
+joins, default inserts, NULL ordering, partial indexes, and dialect-specific
+`ALTER TABLE` forms.
 
 New dialects can be added by implementing `dialect.Renderer`.
 

@@ -1,11 +1,6 @@
 package ddl
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
-)
+import "github.com/SennovE/qrafter/dialect"
 
 // CreateTableStmt builds a CREATE TABLE statement.
 type CreateTableStmt struct {
@@ -50,43 +45,10 @@ func (s CreateTableStmt) Constraints(constraints ...TableConstraint) CreateTable
 
 // Render renders the CREATE TABLE statement.
 func (s CreateTableStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s.renderDDL)
+	return render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.
 func (s CreateTableStmt) MustRender(d dialect.Renderer) string {
-	return mustRender(d, s.renderDDL)
-}
-
-func (s CreateTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
-	if len(s.columns) == 0 && len(s.constraints) == 0 {
-		panic(fmt.Errorf("CREATE TABLE %q must include at least one column or constraint", s.name))
-	}
-
-	w.WriteString("CREATE TABLE ")
-	if s.ifNotExists {
-		w.WriteString("IF NOT EXISTS ")
-	}
-	w.WriteString(d.QuoteIdent(s.name))
-	w.WriteString(" (\n")
-
-	item := 0
-	for _, column := range s.columns {
-		if item > 0 {
-			w.WriteString(",\n")
-		}
-		w.WriteString("    ")
-		column.Render(w, d)
-		item++
-	}
-	for i := range s.constraints {
-		if item > 0 {
-			w.WriteString(",\n")
-		}
-		w.WriteString("    ")
-		s.constraints[i].Render(s.name, w, d)
-		item++
-	}
-
-	w.WriteString("\n)")
+	return mustRender(d, s)
 }

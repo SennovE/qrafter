@@ -1,9 +1,6 @@
 package clauses
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -11,29 +8,6 @@ import (
 type FromClause struct {
 	Tables core.TablesSet
 	Joins  []JoinClause
-}
-
-var _ Clauser = FromClause{}
-
-func (c FromClause) Render(w *strings.Builder, d dialect.Renderer) {
-	if len(c.Tables) == 0 && len(c.Joins) == 0 {
-		return
-	}
-
-	w.WriteString("\nFROM ")
-
-	tables := core.GetSortedTables(c.Tables)
-	joins := c.Joins
-	if len(tables) == 0 {
-		joins[0].Table.Render(w, d)
-		joins = joins[1:]
-	} else {
-		core.RenderWithDelimiter(w, d, ", ", tables)
-	}
-
-	for i := range joins {
-		joins[i].Render(w, d)
-	}
 }
 
 func UpdateTables[T core.Selecter](c *FromClause, others []T) {

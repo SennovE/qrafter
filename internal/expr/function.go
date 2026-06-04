@@ -1,9 +1,6 @@
 package expr
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -15,11 +12,12 @@ type FunctionExpression struct {
 
 var _ core.Selecter = FunctionExpression{}
 
-func (e FunctionExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString(e.name)
-	w.WriteString("(")
-	core.RenderWithDelimiter(w, d, ", ", e.args)
-	w.WriteString(")")
+func (e FunctionExpression) Name() string {
+	return e.name
+}
+
+func (e FunctionExpression) Args() []core.Selecter {
+	return e.args
 }
 
 func (e FunctionExpression) Tables() core.TablesSet {
@@ -43,9 +41,8 @@ type DistinctExpression struct {
 
 var _ core.Selecter = DistinctExpression{}
 
-func (e DistinctExpression) Render(w *strings.Builder, d dialect.Renderer) {
-	w.WriteString("DISTINCT ")
-	e.expr.Render(w, d)
+func (e DistinctExpression) Expr() core.Selecter {
+	return e.expr
 }
 
 func (e DistinctExpression) Tables() core.TablesSet {

@@ -1,10 +1,6 @@
 package ddl
 
-import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
-)
+import "github.com/SennovE/qrafter/dialect"
 
 type dropBehavior int
 
@@ -46,33 +42,10 @@ func (s DropTableStmt) Restrict() DropTableStmt {
 
 // Render renders the DROP TABLE statement.
 func (s DropTableStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s.renderDDL)
+	return render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.
 func (s DropTableStmt) MustRender(d dialect.Renderer) string {
-	return mustRender(d, s.renderDDL)
-}
-
-func (s DropTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) && s.behavior != dropDefault {
-		unsupported(d, "DROP TABLE CASCADE/RESTRICT")
-	}
-
-	w.WriteString("DROP TABLE ")
-	if s.ifExists {
-		w.WriteString("IF EXISTS ")
-	}
-	for i, t := range s.tables {
-		if i > 0 {
-			w.WriteString(", ")
-		}
-		w.WriteString(d.QuoteIdent(t))
-	}
-	switch s.behavior {
-	case dropCascade:
-		w.WriteString(" CASCADE")
-	case dropRestrict:
-		w.WriteString(" RESTRICT")
-	}
+	return mustRender(d, s)
 }

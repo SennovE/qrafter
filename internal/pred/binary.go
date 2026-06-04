@@ -1,10 +1,6 @@
 package pred
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/utils"
 )
@@ -18,10 +14,16 @@ var _ core.Predicater = BinaryPredicate{}
 
 func (e BinaryPredicate) Predicate() {}
 
-func (e BinaryPredicate) Render(w *strings.Builder, d dialect.Renderer) {
-	core.RenderChild(e.a, e.Precedence(), false, w, d)
-	fmt.Fprintf(w, " %s ", e.op)
-	core.RenderChild(e.b, e.Precedence(), false, w, d)
+func (e BinaryPredicate) Left() core.Selecter {
+	return e.a
+}
+
+func (e BinaryPredicate) Right() core.Selecter {
+	return e.b
+}
+
+func (e BinaryPredicate) Op() string {
+	return e.op
 }
 
 func (e BinaryPredicate) Precedence() int {

@@ -1,9 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 	"github.com/SennovE/qrafter/internal/expr"
 )
@@ -36,11 +33,6 @@ func asSelecters(values []any) []core.Selecter {
 		selecters[i] = asSelecter(value)
 	}
 	return selecters
-}
-
-// Render writes the SQL representation of the expression.
-func (e Expression) Render(w *strings.Builder, d dialect.Renderer) {
-	e.selecter.Render(w, d)
 }
 
 // Tables returns table references used by the expression.

@@ -1,9 +1,6 @@
 package qrafter
 
 import (
-	"strings"
-
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/SennovE/qrafter/internal/core"
 )
 
@@ -43,13 +40,6 @@ func (o Order) NullsFirst() Order {
 func (o Order) NullsLast() Order {
 	o.nulls = "LAST"
 	return o
-}
-
-// Render writes the SQL representation of the order item.
-func (o Order) Render(w *strings.Builder, d dialect.Renderer) {
-	dialect.RenderOrder(w, d, func() {
-		o.expr.Render(w, d)
-	}, o.direction, o.nulls)
 }
 
 // Tables returns table references used by the order item.

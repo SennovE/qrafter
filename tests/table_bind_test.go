@@ -1,12 +1,10 @@
 package tests
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/SennovE/qrafter"
-	"github.com/SennovE/qrafter/dialect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,10 +111,10 @@ func TestTable_MakeAliasWithExplicitConfig(t *testing.T) {
 func checkRenderedColumn[T any](t *testing.T, table, name string, expr qrafter.Column[T]) {
 	t.Helper()
 
-	expected := fmt.Sprintf("%q.%q", table, name)
-
-	var w strings.Builder
-
-	expr.Render(&w, dialect.PostgreSQL{})
-	assert.Equal(t, expected, w.String())
+	assert.Equal(t, name, expr.ColumnName())
+	if expr.TableRef().Alias != "" {
+		assert.Equal(t, table, expr.TableRef().Alias)
+	} else {
+		assert.Equal(t, table, expr.TableRef().Name)
+	}
 }
