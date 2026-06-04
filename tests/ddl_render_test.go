@@ -86,6 +86,16 @@ func TestDDLAlterTableSQLiteUnsupported(t *testing.T) {
 	assert.EqualError(t, err, "SQLite dialect does not support ALTER COLUMN TYPE")
 }
 
+func TestDDLAlterColumnTypePostgreSQL(t *testing.T) {
+	sql, err := ddl.AlterTable("users").
+		AlterColumnType("email", ddl.Text()).
+		Render(dialect.PostgreSQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, `ALTER TABLE "users"
+    ALTER COLUMN "email" TYPE TEXT`, sql)
+}
+
 func TestDDLCreateIndexPostgreSQL(t *testing.T) {
 	sql, err := ddl.CreateIndex("users_email_active_idx").
 		Unique().
@@ -96,6 +106,19 @@ func TestDDLCreateIndexPostgreSQL(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, `CREATE UNIQUE INDEX IF NOT EXISTS "users_email_active_idx" ON "users" ("email") WHERE "deleted_at" IS NULL`, sql)
+}
+
+func TestDDLCreateIndexKeyOptionsPostgreSQL(t *testing.T) {
+	sql, err := ddl.CreateIndex("users_email_idx").
+		On("users", ddl.KeyCol("email").
+			Collate("en_US").
+			OpClass("text_pattern_ops").
+			Desc().
+			NullsLast()).
+		Render(dialect.PostgreSQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, `CREATE INDEX "users_email_idx" ON "users" ("email" COLLATE "en_US" text_pattern_ops DESC NULLS LAST)`, sql)
 }
 
 func TestDDLCreateIndexMySQLUnsupportedPartialIndex(t *testing.T) {
@@ -115,4 +138,13 @@ func TestDDLDropIndexMySQL(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "DROP INDEX `users_email_idx` ON `users`", sql)
+}
+
+func TestDDLAlterIndexRenamePostgreSQL(t *testing.T) {
+	sql, err := ddl.AlterIndex("users_email_idx").
+		Rename("users_email_key").
+		Render(dialect.PostgreSQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, `ALTER INDEX "users_email_idx" RENAME TO "users_email_key"`, sql)
 }

@@ -92,8 +92,6 @@ More application-shaped examples live in [examples](examples):
 
 * [database_sql](examples/database_sql) shows repository-style code with
   `database/sql`, context-aware execution, and typed query rendering.
-* [microservice](examples/microservice) is a runnable HTTP service with
-  SQLite, qrafter-rendered migrations, and database methods.
 * [reporting](examples/reporting) builds a larger analytical query with joins,
   grouping, a CTE, and a window function.
 * [schema](examples/schema) renders DDL for tables, constraints, indexes, and
@@ -163,11 +161,11 @@ Schema statements live in the separate `ddl` package so the root package can
 stay focused on query building:
 
 ```go
-sql, err := ddl.CreateTable(users).
+sql, err := ddl.CreateTable("users").
 	Columns(
-		ddl.Column(users.ID, ddl.BigSerial()).PrimaryKey(),
-		ddl.Column(users.Email, ddl.Text()).NotNull().Unique(),
-		ddl.Column(users.CreatedAt, ddl.TimestampTZ()).DefaultExpr("now()"),
+		ddl.Column("id", ddl.BigSerial()).PrimaryKey(),
+		ddl.Column("email", ddl.VarChar(320)).NotNull().Unique(),
+		ddl.Column("created_at", ddl.TimestampTZ()).DefaultExpr("now()"),
 	).
 	Render(dialect.PostgreSQL{})
 ```
@@ -175,19 +173,26 @@ sql, err := ddl.CreateTable(users).
 DDL rendering returns an error when a dialect cannot safely render a requested
 feature, such as SQLite column type changes or MySQL partial indexes.
 
-When using `FromModel()`, column types are inferred from `qrafter.Column[T]` and
-can be overridden with a field tag:
+Constraints and indexes are built explicitly from table and column names:
 
 ```go
-type User struct {
-	q.Table `table:"users"`
-
-	ID    q.Column[int64]  `db:"id"`
-	Email q.Column[string] `db:"email" ddl:"VARCHAR(320)"`
-}
-
-users := q.MustNewTable[User]()
-sql, err := ddl.CreateTable(users).FromModel().Render(dialect.PostgreSQL{})
+sql, err := ddl.Statements{
+	ddl.CreateTable("users").
+		Columns(
+			ddl.Column("id", ddl.BigSerial()).PrimaryKey(),
+			ddl.Column("org_id", ddl.BigInt()).NotNull(),
+			ddl.Column("email", ddl.VarChar(320)).NotNull(),
+		).
+		Constraints(
+			ddl.Unique("email").Named("users_email_key"),
+			ddl.ForeignKey("org_id").
+				References("orgs", "id").
+				OnDelete(ddl.Cascade),
+		),
+	ddl.CreateIndex("users_email_idx").
+		IfNotExists().
+		OnCols("users", "email"),
+}.Render(dialect.PostgreSQL{})
 ```
 
 ## Dialects

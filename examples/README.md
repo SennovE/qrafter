@@ -12,16 +12,6 @@ methods, and scan the result into application structs.
 It intentionally does not import a database driver so the root module stays
 dependency-free. In a real application, import the driver you use.
 
-## microservice
-
-`microservice` is a runnable HTTP service with SQLite, qrafter-rendered
-migrations, and repository methods:
-
-```sh
-cd examples/microservice
-go run .
-```
-
 ## reporting
 
 `reporting` builds a larger analytical query with joins, grouping, a CTE, and a

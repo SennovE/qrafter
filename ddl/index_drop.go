@@ -19,35 +19,42 @@ type DropIndexStmt struct {
 	online bool
 }
 
+// DropIndex starts a DROP INDEX statement.
 func DropIndex(name string) DropIndexStmt {
 	return DropIndexStmt{name: name}
 }
 
+// IfExists adds IF EXISTS.
 func (s DropIndexStmt) IfExists() DropIndexStmt {
 	s.ifExists = true
 	return s
 }
 
+// Concurrently adds CONCURRENTLY for dialects that support it.
 func (s DropIndexStmt) Concurrently() DropIndexStmt {
 	s.concurrently = true
 	return s
 }
 
+// Cascade adds CASCADE.
 func (s DropIndexStmt) Cascade() DropIndexStmt {
 	s.behavior = dropCascade
 	return s
 }
 
+// Restrict adds RESTRICT.
 func (s DropIndexStmt) Restrict() DropIndexStmt {
 	s.behavior = dropRestrict
 	return s
 }
 
+// OnTable adds the table name required by dialects such as MySQL.
 func (s DropIndexStmt) OnTable(name string) DropIndexStmt {
 	s.table = &name
 	return s
 }
 
+// Online adds ONLINE for dialects that support it.
 func (s DropIndexStmt) Online() DropIndexStmt {
 	s.online = true
 	return s

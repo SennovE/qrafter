@@ -113,7 +113,7 @@ func TestTable_MakeAliasWithExplicitConfig(t *testing.T) {
 func checkRenderedColumn[T any](t *testing.T, table, name string, expr qrafter.Column[T]) {
 	t.Helper()
 
-	expected := fmt.Sprintf(`"%s"."%s"`, table, name)
+	expected := fmt.Sprintf("%q.%q", table, name)
 
 	var w strings.Builder
 

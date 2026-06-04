@@ -1,7 +1,7 @@
 package ddl
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -25,6 +25,7 @@ const (
 	SetDefault ReferenceAction = "SET DEFAULT"
 )
 
+// TableConstraint renders a table-level constraint inside CREATE or ALTER TABLE.
 type TableConstraint interface {
 	Render(table string, w *strings.Builder, d dialect.Renderer)
 }
@@ -39,11 +40,13 @@ type Constraint[T constraintRenderer] struct {
 	c    T
 }
 
+// Named returns a copy of the constraint with an explicit SQL name.
 func (c Constraint[T]) Named(name string) Constraint[T] {
 	c.name = &name
 	return c
 }
 
+// Render writes the SQL representation of the constraint.
 func (c Constraint[T]) Render(table string, w *strings.Builder, d dialect.Renderer) {
 	c.c.Render(table, c.name, w, d)
 }
@@ -59,7 +62,7 @@ func PrimaryKey(columns ...string) Constraint[primaryKey] {
 
 func (c primaryKey) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
 	if name == nil {
-		genName := fmt.Sprintf("fk_%s_%s", table, strings.Join(c.columns, "_"))
+		genName := fmt.Sprintf("pk_%s_%s", table, strings.Join(c.columns, "_"))
 		name = &genName
 	}
 	renderConstraint(*name, "PRIMARY KEY", func() { renderColumnList(w, d, c.columns) }, w, d)
@@ -98,7 +101,7 @@ func (c check) Render(table string, name *string, w *strings.Builder, d dialect.
 	if name == nil {
 		fields := strings.Fields(strings.ToLower(sql))
 		normalized := strings.Join(fields, " ")
-		sum := sha1.Sum([]byte(normalized))
+		sum := sha256.Sum256([]byte(normalized))
 		hsh := hex.EncodeToString(sum[:])[:8]
 		genName := fmt.Sprintf("chk_%s_%s", table, hsh)
 		name = &genName
@@ -106,14 +109,23 @@ func (c check) Render(table string, name *string, w *strings.Builder, d dialect.
 	renderConstraint(*name, "CHECK", func() { w.WriteString(sql) }, w, d)
 }
 
+// ForeignKeyConstraint builds a table-level FOREIGN KEY constraint.
 type ForeignKeyConstraint struct {
 	Constraint[foreignKey]
 }
 
 type foreignKey struct {
-	srcCols  []string
-	refTable string
-	refCols  []string
+	srcCols   []string
+	reference *foreignKeyReference
+	options   *foreignKeyOptions
+}
+
+type foreignKeyReference struct {
+	table   string
+	columns []string
+}
+
+type foreignKeyOptions struct {
 	onDelete *ReferenceAction
 	onUpdate *ReferenceAction
 }
@@ -131,48 +143,65 @@ func ForeignKey(columns ...string) ForeignKeyConstraint {
 
 // References sets the referenced table and columns for a FOREIGN KEY.
 func (c ForeignKeyConstraint) References(table string, columns ...string) ForeignKeyConstraint {
-	c.c.refTable = table
-	c.c.refCols = columns
+	c.c.reference = &foreignKeyReference{
+		table:   table,
+		columns: append([]string(nil), columns...),
+	}
 	return c
 }
 
 // OnDelete sets the foreign key ON DELETE action.
 func (c ForeignKeyConstraint) OnDelete(action ReferenceAction) ForeignKeyConstraint {
-	c.c.onDelete = &action
+	options := c.c.cloneOptions()
+	options.onDelete = &action
+	c.c.options = options
 	return c
 }
 
 // OnUpdate sets the foreign key ON UPDATE action.
 func (c ForeignKeyConstraint) OnUpdate(action ReferenceAction) ForeignKeyConstraint {
-	c.c.onUpdate = &action
+	options := c.c.cloneOptions()
+	options.onUpdate = &action
+	c.c.options = options
 	return c
 }
 
+func (c foreignKey) cloneOptions() *foreignKeyOptions {
+	if c.options == nil {
+		return &foreignKeyOptions{}
+	}
+	options := *c.options
+	return &options
+}
+
 func (c foreignKey) Render(table string, name *string, w *strings.Builder, d dialect.Renderer) {
-	if len(c.srcCols) != len(c.refCols) {
+	if c.reference == nil {
+		panic("foreign key reference is required")
+	}
+	if len(c.srcCols) != len(c.reference.columns) {
 		panic("the number of columns on the left and right must match")
 	}
 	if name == nil {
-		genName := fmt.Sprintf("fk_%s_%s_%s_%s", table, strings.Join(c.srcCols, "_"), c.refTable, strings.Join(c.refCols, "_"))
+		genName := fmt.Sprintf("fk_%s_%s_%s_%s", table, strings.Join(c.srcCols, "_"), c.reference.table, strings.Join(c.reference.columns, "_"))
 		name = &genName
 	}
 	renderConstraint(*name, "FOREIGN KEY", func() { renderColumnList(w, d, c.srcCols) }, w, d)
 	w.WriteString(" REFERENCES ")
-	w.WriteString(d.QuoteIdent(c.refTable))
+	w.WriteString(d.QuoteIdent(c.reference.table))
 	w.WriteString(" (")
-	renderColumnList(w, d, c.refCols)
+	renderColumnList(w, d, c.reference.columns)
 	w.WriteString(")")
-	if c.onDelete != nil {
+	if c.options != nil && c.options.onDelete != nil {
 		w.WriteString(" ON DELETE ")
-		w.WriteString(string(*c.onDelete))
+		w.WriteString(string(*c.options.onDelete))
 	}
-	if c.onUpdate != nil {
+	if c.options != nil && c.options.onUpdate != nil {
 		w.WriteString(" ON UPDATE ")
-		w.WriteString(string(*c.onUpdate))
+		w.WriteString(string(*c.options.onUpdate))
 	}
 }
 
-func renderConstraint(name string, opType string, dataRender func(), w *strings.Builder, d dialect.Renderer) {
+func renderConstraint(name, opType string, dataRender func(), w *strings.Builder, d dialect.Renderer) {
 	fmt.Fprintf(w, "CONSTRAINT %s %s (", d.QuoteIdent(name), opType)
 	dataRender()
 	w.WriteString(")")

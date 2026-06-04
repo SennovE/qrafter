@@ -208,12 +208,14 @@ func (e Expression) IsNull() Predicate { return e.compare("IS", Literal(nil)) }
 // IsNotNull returns an IS NOT NULL predicate.
 func (e Expression) IsNotNull() Predicate { return e.compare("IS NOT", Literal(nil)) }
 
+// RawExpr returns a SQL expression rendered verbatim.
 func RawExpr(sql string) Expression {
 	return expression(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
 		w.WriteString(sql)
 	})
 }
 
+// RawPred returns a SQL predicate rendered verbatim.
 func RawPred(sql string) Predicate {
 	return predicate(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
 		w.WriteString(sql)

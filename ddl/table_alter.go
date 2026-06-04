@@ -102,18 +102,19 @@ func (s AlterTableStmt) AlterColumnType(column string, typ Type) AlterTableStmt 
 }
 
 func (s alterColumnTypeStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) {
+	switch {
+	case isSQLite(d):
 		unsupported(d, "ALTER COLUMN TYPE")
-	} else if isMySQL(d) {
+	case isMySQL(d):
 		w.WriteString("MODIFY COLUMN ")
 		w.WriteString(d.QuoteIdent(s.column))
 		w.WriteString(" ")
-	} else {
+	default:
 		w.WriteString("ALTER COLUMN ")
 		w.WriteString(d.QuoteIdent(s.column))
 		w.WriteString(" TYPE ")
 	}
-	s.typ.render(d)
+	w.WriteString(s.typ.render(d))
 }
 
 type notNullOperation int
@@ -168,7 +169,7 @@ func (s AlterTableStmt) SetDefault(column string, value any) AlterTableStmt {
 }
 
 // SetDefaultExpr appends an ALTER COLUMN SET DEFAULT operation using raw SQL.
-func (s AlterTableStmt) SetDefaultExpr(column string, expr string) AlterTableStmt {
+func (s AlterTableStmt) SetDefaultExpr(column, expr string) AlterTableStmt {
 	s.operations = append(s.operations, setDefaultStmt{column: column, isExpr: true, expr: expr})
 	return s
 }
@@ -236,18 +237,19 @@ func (s AlterTableStmt) DropConstraint(name string) AlterTableStmt {
 	return s
 }
 
-// DropConstraintIfExists appends a DROP CONSTRAINT operation.
+// DropConstraintIfExists appends a DROP CONSTRAINT IF EXISTS operation.
 func (s AlterTableStmt) DropConstraintIfExists(name string) AlterTableStmt {
 	s.operations = append(s.operations, dropConstraintStmt{name: name, ifExists: true})
 	return s
 }
 
 func (s dropConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
-	if isSQLite(d) {
+	switch {
+	case isSQLite(d):
 		unsupported(d, "ALTER TABLE DROP CONSTRAINT")
-	} else if isMySQL(d) {
+	case isMySQL(d):
 		w.WriteString("DROP ")
-	} else {
+	default:
 		w.WriteString("DROP CONSTRAINT ")
 		if s.ifExists {
 			w.WriteString("IF EXISTS ")

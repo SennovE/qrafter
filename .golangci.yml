@@ -30,6 +30,7 @@ linters:
           - gocognit
           - gocyclo
           - errcheck
+          - goconst
           - unused
 
       - path: internal/.*

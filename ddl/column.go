@@ -15,6 +15,10 @@ type ColumnDef struct {
 	notNull    bool
 	unique     bool
 
+	options *columnOptions
+}
+
+type columnOptions struct {
 	defaultValue *columnDefault
 	checks       []columnCheck
 	references   *columnReferences
@@ -69,29 +73,40 @@ func (c ColumnDef) Unique() ColumnDef {
 
 // Default adds a literal DEFAULT value rendered through the dialect.
 func (c ColumnDef) Default(value any) ColumnDef {
-	c.defaultValue = &columnDefault{value: value}
+	options := c.cloneOptions()
+	options.defaultValue = &columnDefault{value: value}
+	c.options = options
 	return c
 }
 
 // DefaultExpr adds a raw SQL DEFAULT expression.
 func (c ColumnDef) DefaultExpr(expr string) ColumnDef {
-	c.defaultValue = &columnDefault{isExpr: true, expr: expr}
+	options := c.cloneOptions()
+	options.defaultValue = &columnDefault{isExpr: true, expr: expr}
+	c.options = options
 	return c
 }
 
 // Check adds a column-level CHECK expression.
-// func (c ColumnDef) Check(expr string) ColumnDef {
-// }
-
-// References adds a column-level foreign key reference.
-func (c ColumnDef) References(table string, columns ...string) ColumnDef {
-	c.references = &columnReferences{
-		table:   table,
-		columns: columns,
-	}
+func (c ColumnDef) Check(expr string) ColumnDef {
+	options := c.cloneOptions()
+	options.checks = append(options.checks, columnCheck{expr: expr})
+	c.options = options
 	return c
 }
 
+// References adds a column-level foreign key reference.
+func (c ColumnDef) References(table string, columns ...string) ColumnDef {
+	options := c.cloneOptions()
+	options.references = &columnReferences{
+		table:   table,
+		columns: columns,
+	}
+	c.options = options
+	return c
+}
+
+// Render writes the SQL representation of the column definition.
 func (c ColumnDef) Render(w *strings.Builder, d dialect.Renderer) {
 	c.renderNameAndType(w, d)
 	c.renderNullability(w)
@@ -100,6 +115,15 @@ func (c ColumnDef) Render(w *strings.Builder, d dialect.Renderer) {
 	c.renderUnique(w)
 	c.renderChecks(w)
 	c.renderReferences(w, d)
+}
+
+func (c ColumnDef) cloneOptions() *columnOptions {
+	if c.options == nil {
+		return &columnOptions{}
+	}
+	options := *c.options
+	options.checks = append([]columnCheck(nil), c.options.checks...)
+	return &options
 }
 
 func (c ColumnDef) renderNameAndType(w *strings.Builder, d dialect.Renderer) {
@@ -115,13 +139,13 @@ func (c ColumnDef) renderNullability(w *strings.Builder) {
 }
 
 func (c ColumnDef) renderDefault(w *strings.Builder, d dialect.Renderer) {
-	if c.defaultValue != nil {
+	if c.options != nil && c.options.defaultValue != nil {
 		w.WriteString(" DEFAULT ")
-		if c.defaultValue.isExpr {
-			w.WriteString(c.defaultValue.expr)
+		if c.options.defaultValue.isExpr {
+			w.WriteString(c.options.defaultValue.expr)
 			return
 		}
-		w.WriteString(d.Literal(c.defaultValue.value))
+		w.WriteString(d.Literal(c.options.defaultValue.value))
 	}
 }
 
@@ -138,22 +162,27 @@ func (c ColumnDef) renderUnique(w *strings.Builder) {
 }
 
 func (c ColumnDef) renderChecks(w *strings.Builder) {
-	for i := range c.checks {
+	if c.options == nil {
+		return
+	}
+	for i := range c.options.checks {
 		w.WriteString(" CHECK (")
-		w.WriteString(c.checks[i].expr)
+		w.WriteString(c.options.checks[i].expr)
 		w.WriteString(")")
 	}
 }
 
 func (c ColumnDef) renderReferences(w *strings.Builder, d dialect.Renderer) {
-	if c.references != nil {
-		w.WriteString(" REFERENCES ")
-		w.WriteString(d.QuoteIdent(c.references.table))
+	if c.options == nil || c.options.references == nil {
+		return
+	}
 
-		if len(c.references.columns) > 0 {
-			w.WriteString(" (")
-			renderColumnList(w, d, c.references.columns)
-			w.WriteString(")")
-		}
+	w.WriteString(" REFERENCES ")
+	w.WriteString(d.QuoteIdent(c.options.references.table))
+
+	if len(c.options.references.columns) > 0 {
+		w.WriteString(" (")
+		renderColumnList(w, d, c.options.references.columns)
+		w.WriteString(")")
 	}
 }
