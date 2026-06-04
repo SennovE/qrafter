@@ -122,7 +122,6 @@ func Func(name string, args ...any) Expression {
 
 // Col creates an unqualified column reference for DDL predicates.
 func Col(name string) Expression {
-	name = requireName("column", name)
 	return expression(precedenceValue, func(w *strings.Builder, d dialect.Renderer) {
 		w.WriteString(d.QuoteIdent(name))
 	})
@@ -208,3 +207,15 @@ func (e Expression) IsNull() Predicate { return e.compare("IS", Literal(nil)) }
 
 // IsNotNull returns an IS NOT NULL predicate.
 func (e Expression) IsNotNull() Predicate { return e.compare("IS NOT", Literal(nil)) }
+
+func RawExpr(sql string) Expression {
+	return expression(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
+		w.WriteString(sql)
+	})
+}
+
+func RawPred(sql string) Predicate {
+	return predicate(precedenceValue, func(w *strings.Builder, _ dialect.Renderer) {
+		w.WriteString(sql)
+	})
+}

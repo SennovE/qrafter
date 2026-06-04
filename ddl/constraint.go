@@ -157,9 +157,9 @@ func (c foreignKey) Render(table string, name *string, w *strings.Builder, d dia
 		name = &genName
 	}
 	renderConstraint(*name, "FOREIGN KEY", func() { renderColumnList(w, d, c.srcCols) }, w, d)
-	w.WriteString(" REFERENCES")
-	w.WriteString(c.refTable)
-	w.WriteString("(")
+	w.WriteString(" REFERENCES ")
+	w.WriteString(d.QuoteIdent(c.refTable))
+	w.WriteString(" (")
 	renderColumnList(w, d, c.refCols)
 	w.WriteString(")")
 	if c.onDelete != nil {
@@ -172,8 +172,8 @@ func (c foreignKey) Render(table string, name *string, w *strings.Builder, d dia
 	}
 }
 
-func renderConstraint(name string, typ string, dataRender func(), w *strings.Builder, d dialect.Renderer) {
-	fmt.Fprintf(w, "CONSTRAINT %s %s (", name, typ)
+func renderConstraint(name string, opType string, dataRender func(), w *strings.Builder, d dialect.Renderer) {
+	fmt.Fprintf(w, "CONSTRAINT %s %s (", d.QuoteIdent(name), opType)
 	dataRender()
 	w.WriteString(")")
 }

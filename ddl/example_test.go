@@ -55,19 +55,19 @@ func ExampleColumn() {
 	// )
 }
 
-// func ExampleCreateIndex() {
-// 	sql := ddl.CreateIndex("users_email_active_idx").
-// 		Unique().
-// 		IfNotExists().
-// 		On("users", "email").
-// 		Where(users.DeletedAt.IsNull()).
-// 		MustRender(dialect.PostgreSQL{})
+func ExampleCreateIndex() {
+	sql := ddl.CreateIndex("users_email_active_idx").
+		Unique().
+		IfNotExists().
+		On("users", ddl.KeyCol("email")).
+		Where(ddl.Col("deleted_at").IsNull()).
+		MustRender(dialect.PostgreSQL{})
 
-// 	fmt.Println(sql)
+	fmt.Println(sql)
 
-// 	// Output:
-// 	// CREATE UNIQUE INDEX IF NOT EXISTS "users_email_active_idx" ON "users" ("email") WHERE "deleted_at" IS NULL
-// }
+	// Output:
+	// CREATE UNIQUE INDEX IF NOT EXISTS "users_email_active_idx" ON "users" ("email") WHERE "deleted_at" IS NULL
+}
 
 func ExampleAlterTable() {
 	sql := ddl.AlterTable("users").
@@ -80,11 +80,9 @@ func ExampleAlterTable() {
 
 	// Output:
 	// ALTER TABLE "users"
-	// ADD COLUMN "display_name" TEXT NOT NULL DEFAULT '';
-	// ALTER TABLE "users"
-	// ALTER COLUMN "created_at" SET DEFAULT now();
-	// ALTER TABLE "users"
-	// ALTER COLUMN "email" SET NOT NULL
+	//     ADD COLUMN "display_name" TEXT NOT NULL DEFAULT '',
+	//     ALTER COLUMN "created_at" SET DEFAULT now(),
+	//     ALTER COLUMN "email" SET NOT NULL
 }
 
 func ExampleAlterTableStmt_RenameColumn() {
@@ -97,9 +95,8 @@ func ExampleAlterTableStmt_RenameColumn() {
 
 	// Output:
 	// ALTER TABLE "users"
-	// RENAME COLUMN "name" TO "display_name";
-	// ALTER TABLE "users"
-	// ALTER COLUMN "created_at" DROP DEFAULT
+	//     RENAME COLUMN "name" TO "display_name",
+	//     ALTER COLUMN "created_at" DROP DEFAULT
 }
 
 func ExampleAlterTableStmt_AddConstraint() {
@@ -117,9 +114,8 @@ func ExampleAlterTableStmt_AddConstraint() {
 
 	// Output:
 	// ALTER TABLE "users"
-	// ADD CONSTRAINT "users_org_id_fk" FOREIGN KEY ("org_id") REFERENCES "orgs" ("id") ON DELETE CASCADE;
-	// ALTER TABLE "users"
-	// ADD CONSTRAINT "users_email_key" UNIQUE ("email")
+	//     ADD CONSTRAINT "users_org_id_fk" FOREIGN KEY ("org_id") REFERENCES "orgs" ("id") ON DELETE CASCADE,
+	//     ADD CONSTRAINT "users_email_key" UNIQUE ("email")
 }
 
 func ExampleAlterTableStmt_Render_unsupportedFeature() {
@@ -144,5 +140,5 @@ func ExampleCheck() {
 
 	// Output:
 	// ALTER TABLE "users"
-	// ADD CONSTRAINT "chk_users" CHECK ("age" >= 0)
+	//     ADD CONSTRAINT "chk_users" CHECK ("age" >= 0)
 }

@@ -39,8 +39,7 @@ func main() {
 		ddl.CreateIndex("users_active_email_idx").
 			Unique().
 			IfNotExists().
-			On("users", "email").
-			Where(),
+			OnCols("users", "email"),
 
 		ddl.AlterTable("users").
 			AddColumn(ddl.Column("last_seen_at", ddl.TimestampTZ())).

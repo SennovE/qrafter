@@ -7,14 +7,14 @@ import (
 	"github.com/SennovE/qrafter/dialect"
 )
 
-type alterOperationRenderer interface {
-	renderAlterOperation(w *strings.Builder, d dialect.Renderer)
+type alterTableOpRenderer interface {
+	renderAlterTableOp(w *strings.Builder, d dialect.Renderer)
 }
 
 // AlterTableStmt builds ALTER TABLE statements.
 type AlterTableStmt struct {
 	table      string
-	operations []alterOperationRenderer
+	operations []alterTableOpRenderer
 }
 
 // AlterTable starts an ALTER TABLE statement.
@@ -33,7 +33,7 @@ func (s AlterTableStmt) RenameColumn(column, name string) AlterTableStmt {
 	return s
 }
 
-func (s renameColumnStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s renameColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("RENAME COLUMN ")
 	w.WriteString(d.QuoteIdent(s.column))
 	w.WriteString(" TO ")
@@ -57,7 +57,7 @@ func (s AlterTableStmt) AddColumnIfNotExists(column ColumnDef) AlterTableStmt {
 	return s
 }
 
-func (s addColumnStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s addColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("ADD COLUMN ")
 	if s.ifNotExists {
 		w.WriteString("IF NOT EXISTS ")
@@ -82,7 +82,7 @@ func (s AlterTableStmt) DropColumnIfExists(column string) AlterTableStmt {
 	return s
 }
 
-func (s dropColumnStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s dropColumnStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("DROP COLUMN ")
 	if s.ifExists {
 		w.WriteString("IF EXISTS ")
@@ -101,7 +101,7 @@ func (s AlterTableStmt) AlterColumnType(column string, typ Type) AlterTableStmt 
 	return s
 }
 
-func (s alterColumnTypeStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s alterColumnTypeStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) {
 		unsupported(d, "ALTER COLUMN TYPE")
 	} else if isMySQL(d) {
@@ -140,7 +140,7 @@ func (s AlterTableStmt) DropNotNull(column string) AlterTableStmt {
 	return s
 }
 
-func (s changeNotNullStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s changeNotNullStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) || isMySQL(d) {
 		unsupported(d, "ALTER COLUMN NULLABILITY")
 	}
@@ -173,7 +173,7 @@ func (s AlterTableStmt) SetDefaultExpr(column string, expr string) AlterTableStm
 	return s
 }
 
-func (s setDefaultStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s setDefaultStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) {
 		unsupported(d, "ALTER COLUMN DEFAULT")
 	}
@@ -197,7 +197,7 @@ func (s AlterTableStmt) DropDefault(column string) AlterTableStmt {
 	return s
 }
 
-func (s dropDefaultStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s dropDefaultStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) {
 		unsupported(d, "ALTER COLUMN DEFAULT")
 	}
@@ -217,7 +217,7 @@ func (s AlterTableStmt) AddConstraint(constraint TableConstraint) AlterTableStmt
 	return s
 }
 
-func (s addConstraintStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s addConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) {
 		unsupported(d, "ALTER TABLE ADD CONSTRAINT")
 	}
@@ -236,13 +236,13 @@ func (s AlterTableStmt) DropConstraint(name string) AlterTableStmt {
 	return s
 }
 
-// DropConstraint appends a DROP CONSTRAINT operation.
+// DropConstraintIfExists appends a DROP CONSTRAINT operation.
 func (s AlterTableStmt) DropConstraintIfExists(name string) AlterTableStmt {
 	s.operations = append(s.operations, dropConstraintStmt{name: name, ifExists: true})
 	return s
 }
 
-func (s dropConstraintStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s dropConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	if isSQLite(d) {
 		unsupported(d, "ALTER TABLE DROP CONSTRAINT")
 	} else if isMySQL(d) {
@@ -267,7 +267,7 @@ func (s AlterTableStmt) RenameConstraint(column, name string) AlterTableStmt {
 	return s
 }
 
-func (s renameConstraintStmt) renderAlterOperation(w *strings.Builder, d dialect.Renderer) {
+func (s renameConstraintStmt) renderAlterTableOp(w *strings.Builder, d dialect.Renderer) {
 	w.WriteString("RENAME CONSTRAINT ")
 	w.WriteString(d.QuoteIdent(s.column))
 	w.WriteString(" TO ")
@@ -289,24 +289,23 @@ func (s AlterTableStmt) renderDDL(w *strings.Builder, d dialect.Renderer) {
 		panic(fmt.Errorf("ALTER TABLE %q must include at least one operation", s.table))
 	}
 	w.WriteString("ALTER TABLE ")
-	w.WriteString(s.table)
-	w.WriteString(" ")
+	w.WriteString(d.QuoteIdent(s.table))
 
 	for i, op := range s.operations {
 		if i == 0 {
 			if !isSQLite(d) {
-				w.WriteString("\n")
+				w.WriteString("\n    ")
 			}
 		}
 		if i > 0 {
 			if isSQLite(d) {
 				w.WriteString(";\nALTER TABLE ")
-				w.WriteString(s.table)
+				w.WriteString(d.QuoteIdent(s.table))
 				w.WriteString(" ")
 			} else {
 				w.WriteString(",\n    ")
 			}
 		}
-		op.renderAlterOperation(w, d)
+		op.renderAlterTableOp(w, d)
 	}
 }

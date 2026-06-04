@@ -13,10 +13,33 @@ type Renderer interface {
 	MustRender(d dialect.Renderer) string
 }
 
+// Statements renders a group of DDL statements separated by semicolons.
+type Statements []Renderer
+
 type ddlRenderer func(w *strings.Builder, d dialect.Renderer)
 
 type dialectNamer interface {
 	DialectName() string
+}
+
+// Render renders all statements separated by semicolons.
+func (s Statements) Render(d dialect.Renderer) (string, error) {
+	return render(d, s.renderDDLs)
+}
+
+// MustRender is like Render but panics if rendering fails.
+func (s Statements) MustRender(d dialect.Renderer) string {
+	return mustRender(d, s.renderDDLs)
+}
+
+func (s Statements) renderDDLs(w *strings.Builder, d dialect.Renderer) {
+	for _, stmt := range s {
+		sql := stmt.MustRender(d)
+		if sql != "" {
+			w.WriteString(sql)
+			w.WriteString(";\n")
+		}
+	}
 }
 
 func render(d dialect.Renderer, fn ddlRenderer) (sql string, err error) {

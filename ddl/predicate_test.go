@@ -28,6 +28,6 @@ func TestColumnPredicateKeepsStringValuesAsLiterals(t *testing.T) {
 	}
 }
 
-func TestCheckAcceptsRootPredicate(t *testing.T) {
+func TestCheckAcceptsRootPredicate(_ *testing.T) {
 	_ = Check(q.Literal(1).Eq(1))
 }
