@@ -4,14 +4,13 @@
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/SennovE/qrafter)](https://goreportcard.com/report/github.com/SennovE/qrafter)
 
-**qrafter is a small type-safe SQL query builder for Go - no ORM, no codegen, just typed SQL-shaped Go.**
+**qrafter is a fluent, type-safe SQL query builder for Go — no ORM, no codegen, just typed SQL-shaped Go.**
 
 qrafter helps you build parameterized SQL from typed Go table structs.
 You define tables once, compose queries from typed columns, and render SQL plus
 driver arguments for `database/sql`, `sqlx`, and similar packages.
 
-It is designed for Go developers who want to keep SQL explicit, but avoid
-hand-writing fragile column names, placeholders, and query fragments.
+It is designed for Go developers who want a Go-style way to build explicit SQL: keep queries readable and under control, while avoiding fragile hand-written column names, placeholders, and query fragments.
 
 ## Why qrafter?
 
@@ -24,10 +23,6 @@ Use qrafter when you want:
 - Compatibility with your existing database driver and connection pool
 - A lightweight query builder instead of a full ORM
 - No code generation step in your build workflow
-
-qrafter is probably not the right fit if you want schema migrations, model
-lifecycle hooks, relationship loading, or an ORM that hides SQL from application
-code.
 
 ## Install
 

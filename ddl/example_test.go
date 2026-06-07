@@ -29,10 +29,11 @@ func ExampleCreateTable() {
 
 	// Output:
 	// CREATE TABLE IF NOT EXISTS "users" (
-	//     "id" BIGSERIAL PRIMARY KEY,
+	//     "id" BIGSERIAL,
 	//     "email" VARCHAR(320) NOT NULL,
 	//     "org_id" BIGINT,
 	//     "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	//     CONSTRAINT "pk_users_id" PRIMARY KEY ("id"),
 	//     CONSTRAINT "users_email_key" UNIQUE ("email"),
 	//     CONSTRAINT "users_org_id_fk" FOREIGN KEY ("org_id") REFERENCES "orgs" ("id") ON DELETE CASCADE
 	// )

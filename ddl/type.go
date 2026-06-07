@@ -13,6 +13,11 @@ type Type struct {
 	dialectName map[string]string
 }
 
+// IsZero reports whether the type has not been initialized.
+func (t Type) IsZero() bool {
+	return t.name == ""
+}
+
 // SQLType creates a custom SQL type name.
 func SQLType(name string) Type {
 	return Type{name: requireName("type", name)}
