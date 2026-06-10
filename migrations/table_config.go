@@ -9,9 +9,15 @@ import (
 	"github.com/SennovE/qrafter/dialect"
 )
 
-// TableConfigToSchemaTable builds a normalized schema table snapshot from a
-// qrafter table configuration and inferred column metadata.
-func TableConfigToSchemaTable[T q.TableConfigProvider](d dialect.Renderer) Table {
+// TableConfigToSchema builds a normalized schema snapshot from a qrafter table
+// configuration and inferred column metadata.
+func TableConfigToSchema[T q.TableConfigProvider](d dialect.Renderer) Schema {
+	schema := Schema{Tables: []Table{tableConfigToSchema[T](d)}}
+	schema.normalize()
+	return schema
+}
+
+func tableConfigToSchema[T q.TableConfigProvider](d dialect.Renderer) Table {
 	t := q.MustNewTable[T]()
 	cfg := t.TableConfig()
 
@@ -50,17 +56,36 @@ func TableConfigToSchemaTable[T q.TableConfigProvider](d dialect.Renderer) Table
 				Columns:   []string{col.Name},
 			})
 		}
+		if colCfg.Unique {
+			table.Constraints = appendConstraintsUnique(table.Constraints, Constraint{
+				Schema:    table.Schema,
+				TableName: table.Name,
+				Kind:      ConstraintUnique,
+				Columns:   []string{col.Name},
+			})
+		}
 
 		columnsByKey[key.Name] = col
 	}
 
 	table.Columns = make([]Column, 0, len(columnsByKey))
-	for _, col := range columnsByKey {
+	for key := range columnsByKey {
+		col := columnsByKey[key]
 		col.Schema = table.Schema
 		col.TableName = table.Name
 		table.Columns = append(table.Columns, col)
 	}
+	for _, constraint := range cfg.Constraints {
+		table.Constraints = appendConstraintsUnique(
+			table.Constraints,
+			tableConstraintFromDDL(d, &table, constraint),
+		)
+	}
+	for _, index := range cfg.Indexes {
+		table.Indexes = append(table.Indexes, indexFromDDL(d, &table, index))
+	}
 
+	qualifyTableConstraints(&table)
 	table.normalize()
 	return table
 }
@@ -137,8 +162,8 @@ func parseQTag(tag string) map[string]string {
 			continue
 		}
 		key, val := part, ""
-		if idx := strings.Index(part, ":"); idx >= 0 {
-			key, val = part[:idx], part[idx+1:]
+		if cutKey, cutVal, ok := strings.Cut(part, ":"); ok {
+			key, val = cutKey, cutVal
 		}
 		out[key] = val
 	}
@@ -151,13 +176,13 @@ func ddlTypeFromGoType(t reflect.Type) ddl.Type {
 	switch arg {
 	case "int64":
 		return ddl.BigInt()
-	case "int", "int32":
+	case "int", "int32": //nolint:goconst // database type aliases are clearer inline
 		return ddl.Integer()
 	case "int16":
 		return ddl.SmallInt()
 	case "string":
 		return ddl.Text()
-	case "bool":
+	case "bool": //nolint:goconst // database type aliases are clearer inline
 		return ddl.Boolean()
 	case "[]uint8", "[]byte":
 		return ddl.Binary()

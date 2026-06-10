@@ -207,20 +207,20 @@ func (c *compiler) compileStatements(statements Statements) {
 }
 
 func (c *compiler) compileCreateTable(s CreateTableStmt) {
-	columnConstraints := columnConstraintsAsTableConstraints(s.columns)
-	if len(s.columns) == 0 && len(columnConstraints) == 0 && len(s.constraints) == 0 {
-		panic(fmt.Errorf("CREATE TABLE %q must include at least one column or constraint", s.name))
+	columnConstraints := columnConstraintsAsTableConstraints(s.ColumnDefs)
+	if len(s.ColumnDefs) == 0 && len(columnConstraints) == 0 && len(s.TableConstraints) == 0 {
+		panic(fmt.Errorf("CREATE TABLE %q must include at least one column or constraint", s.TableName))
 	}
 
 	c.Write("CREATE TABLE ")
-	if s.ifNotExists {
+	if s.IfNotExistsFlag {
 		c.Write("IF NOT EXISTS ")
 	}
-	c.Write(c.renderer.QuoteIdent(s.name))
+	c.Write(c.renderer.QuoteIdent(s.TableName))
 	c.Write(" (\n")
 
 	item := 0
-	for _, column := range s.columns {
+	for _, column := range s.ColumnDefs {
 		if item > 0 {
 			c.Write(",\n")
 		}
@@ -233,15 +233,15 @@ func (c *compiler) compileCreateTable(s CreateTableStmt) {
 			c.Write(",\n")
 		}
 		c.Write("    ")
-		c.Compile(tableConstraintNode{table: s.name, constraint: constraint})
+		c.Compile(tableConstraintNode{table: s.TableName, constraint: constraint})
 		item++
 	}
-	for _, constraint := range s.constraints {
+	for _, constraint := range s.TableConstraints {
 		if item > 0 {
 			c.Write(",\n")
 		}
 		c.Write("    ")
-		c.Compile(tableConstraintNode{table: s.name, constraint: constraint})
+		c.Compile(tableConstraintNode{table: s.TableName, constraint: constraint})
 		item++
 	}
 
@@ -276,8 +276,8 @@ func (c *compiler) compileAlterTable(s AlterTableStmt) {
 }
 
 func (c *compiler) compileCreateIndex(s CreateIndexStmt) {
-	if len(s.keys) == 0 {
-		panic(fmt.Errorf("CREATE INDEX %q must include at least one key", s.name))
+	if len(s.Keys) == 0 {
+		panic(fmt.Errorf("CREATE INDEX %q must include at least one key", s.Name))
 	}
 
 	c.compileCreateIndexPrefix(s)
@@ -289,79 +289,79 @@ func (c *compiler) compileCreateIndex(s CreateIndexStmt) {
 
 func (c *compiler) compileCreateIndexPrefix(s CreateIndexStmt) {
 	c.Write("CREATE ")
-	if s.options != nil && s.options.unique {
+	if s.Options != nil && s.Options.Unique {
 		c.Write("UNIQUE ")
 	}
-	if s.options != nil && s.options.clustered != nil {
-		if *s.options.clustered {
+	if s.Options != nil && s.Options.Clustered != nil {
+		if *s.Options.Clustered {
 			c.Write("CLUSTERED ")
 		} else {
 			c.Write("NONCLUSTERED ")
 		}
 	}
 	c.Write("INDEX ")
-	if s.options != nil && s.options.concurrently {
+	if s.Options != nil && s.Options.Concurrently {
 		c.Write("CONCURRENTLY ")
 	}
-	if s.options != nil && s.options.ifNotExists {
+	if s.Options != nil && s.Options.IfNotExists {
 		c.Write("IF NOT EXISTS ")
 	}
 }
 
 func (c *compiler) compileCreateIndexTarget(s CreateIndexStmt) {
-	c.Write(c.renderer.QuoteIdent(s.name))
+	c.Write(c.renderer.QuoteIdent(s.Name))
 	c.Write(" ON ")
-	c.Write(c.renderer.QuoteIdent(s.table))
-	if s.options != nil && s.options.method != IndexDefault {
+	c.Write(c.renderer.QuoteIdent(s.Table))
+	if s.Options != nil && s.Options.Method != IndexDefault {
 		c.Write(" USING ")
-		c.Write(string(s.options.method))
+		c.Write(string(s.Options.Method))
 	}
 }
 
 func (c *compiler) compileCreateIndexKeys(s CreateIndexStmt) {
 	c.Write(" (")
-	c.CompileList(indexKeysAsAny(s.keys), ", ")
+	c.CompileList(indexKeysAsAny(s.Keys), ", ")
 	c.Write(")")
 }
 
 func (c *compiler) compileCreateIndexInclude(s CreateIndexStmt) {
-	if s.options != nil && len(s.options.include) > 0 {
+	if s.Options != nil && len(s.Options.Include) > 0 {
 		c.Write(" INCLUDE (")
-		c.CompileList(expressionsAsAny(s.options.include), ", ")
+		c.CompileList(expressionsAsAny(s.Options.Include), ", ")
 		c.Write(")")
 	}
 }
 
 func (c *compiler) compileCreateIndexOptions(s CreateIndexStmt) {
-	if s.options != nil && s.options.nullsNotDistinct {
+	if s.Options != nil && s.Options.NullsNotDistinct {
 		c.Write(" NULLS NOT DISTINCT")
 	}
 	c.compileCreateIndexStorage(s)
-	if s.options != nil && s.options.tablespace != "" {
+	if s.Options != nil && s.Options.Tablespace != "" {
 		c.Write(" TABLESPACE ")
-		c.Write(c.renderer.QuoteIdent(s.options.tablespace))
+		c.Write(c.renderer.QuoteIdent(s.Options.Tablespace))
 	}
-	if s.options != nil && s.options.pred != nil {
-		c.Compile(dialect.PartialIndexPredicate{Predicate: *s.options.pred})
+	if s.Options != nil && s.Options.Predicate != nil {
+		c.Compile(dialect.PartialIndexPredicate{Predicate: *s.Options.Predicate})
 	}
-	if s.options != nil && s.options.invisible {
+	if s.Options != nil && s.Options.Invisible {
 		c.Write(" INVISIBLE")
 	}
 }
 
 func (c *compiler) compileCreateIndexStorage(s CreateIndexStmt) {
-	if s.options == nil || len(s.options.with) == 0 {
+	if s.Options == nil || len(s.Options.With) == 0 {
 		return
 	}
 
 	c.Write(" WITH (")
-	for i, opt := range s.options.with {
+	for i, opt := range s.Options.With {
 		if i > 0 {
 			c.Write(", ")
 		}
-		c.Write(opt.name)
+		c.Write(opt.Name)
 		c.Write(" = ")
-		c.Write(renderIndexOptionValue(c.renderer, opt.value))
+		c.Write(renderIndexOptionValue(c.renderer, opt.Value))
 	}
 	c.Write(")")
 }
@@ -410,47 +410,47 @@ func (c *compiler) compileAlterIndex(s AlterIndexStmt) {
 func (c *compiler) compileColumn(column ColumnDef, includeConstraints bool) {
 	c.validateColumnGeneratedOptions(column)
 
-	c.Write(c.renderer.QuoteIdent(column.name))
+	c.Write(c.renderer.QuoteIdent(column.Name))
 	c.Write(" ")
-	c.Write(column.typ.render(c.renderer))
+	c.Write(column.Type.render(c.renderer))
 	c.compileColumnGeneratedOptions(column)
 
-	if column.notNull {
+	if column.IsNotNull {
 		c.Write(" NOT NULL")
 	}
-	if column.options != nil && column.options.defaultValue != nil {
+	if column.Options != nil && column.Options.Default != nil {
 		c.Write(" DEFAULT ")
-		if column.options.defaultValue.isExpr {
-			c.Write(column.options.defaultValue.expr)
+		if column.Options.Default.IsExpr {
+			c.Write(column.Options.Default.Expr)
 		} else {
-			c.Write(c.renderer.Literal(column.options.defaultValue.value))
+			c.Write(c.renderer.Literal(column.Options.Default.Value))
 		}
 	}
 	if !includeConstraints {
 		return
 	}
-	if column.primaryKey {
+	if column.IsPrimaryKey {
 		c.Write(" PRIMARY KEY")
 	}
-	if column.unique {
+	if column.IsUnique {
 		c.Write(" UNIQUE")
 	}
-	if column.options != nil {
-		for i := range column.options.checks {
+	if column.Options != nil {
+		for i := range column.Options.Checks {
 			c.Write(" CHECK (")
-			c.Write(column.options.checks[i].expr)
+			c.Write(column.Options.Checks[i].Expr)
 			c.Write(")")
 		}
 	}
-	if column.options == nil || column.options.references == nil {
+	if column.Options == nil || column.Options.References == nil {
 		return
 	}
 
 	c.Write(" REFERENCES ")
-	c.Write(c.renderer.QuoteIdent(column.options.references.table))
-	if len(column.options.references.columns) > 0 {
+	c.Write(c.renderer.QuoteIdent(column.Options.References.Table))
+	if len(column.Options.References.Columns) > 0 {
 		c.Write(" (")
-		c.compileColumnList(column.options.references.columns)
+		c.compileColumnList(column.Options.References.Columns)
 		c.Write(")")
 	}
 }
@@ -458,22 +458,22 @@ func (c *compiler) compileColumn(column ColumnDef, includeConstraints bool) {
 func columnConstraintsAsTableConstraints(columns []ColumnDef) []TableConstraint {
 	var constraints []TableConstraint
 	for _, column := range columns {
-		if column.primaryKey {
-			constraints = append(constraints, PrimaryKey(column.name))
+		if column.IsPrimaryKey {
+			constraints = append(constraints, PrimaryKey(column.Name))
 		}
-		if column.unique {
-			constraints = append(constraints, Unique(column.name))
+		if column.IsUnique {
+			constraints = append(constraints, Unique(column.Name))
 		}
-		if column.options == nil {
+		if column.Options == nil {
 			continue
 		}
-		for _, check := range column.options.checks {
-			constraints = append(constraints, Check(RawPred(check.expr)))
+		for _, check := range column.Options.Checks {
+			constraints = append(constraints, Check(RawPred(check.Expr)))
 		}
-		if column.options.references != nil {
-			constraints = append(constraints, ForeignKey(column.name).References(
-				column.options.references.table,
-				column.options.references.columns...,
+		if column.Options.References != nil {
+			constraints = append(constraints, ForeignKey(column.Name).References(
+				column.Options.References.Table,
+				column.Options.References.Columns...,
 			))
 		}
 	}
@@ -481,26 +481,26 @@ func columnConstraintsAsTableConstraints(columns []ColumnDef) []TableConstraint 
 }
 
 func (c *compiler) validateColumnGeneratedOptions(column ColumnDef) {
-	if column.options == nil {
+	if column.Options == nil {
 		return
 	}
-	if column.options.identity != nil && column.options.generated != nil {
+	if column.Options.Identity != nil && column.Options.Generated != nil {
 		panic("ddl: column cannot be both identity and generated")
 	}
-	if column.options.identity != nil && column.options.defaultValue != nil {
+	if column.Options.Identity != nil && column.Options.Default != nil {
 		panic("ddl: identity column cannot have DEFAULT")
 	}
-	if column.options.generated != nil && column.options.defaultValue != nil {
+	if column.Options.Generated != nil && column.Options.Default != nil {
 		panic("ddl: generated column cannot have DEFAULT")
 	}
 }
 
 func (c *compiler) compileColumnGeneratedOptions(column ColumnDef) {
-	if column.options == nil {
+	if column.Options == nil {
 		return
 	}
-	if column.options.identity != nil {
-		switch column.options.identity.kind {
+	if column.Options.Identity != nil {
+		switch column.Options.Identity.Kind {
 		case IdentityAlways:
 			c.Write(" GENERATED ALWAYS AS IDENTITY")
 		case IdentityByDefault:
@@ -509,11 +509,11 @@ func (c *compiler) compileColumnGeneratedOptions(column ColumnDef) {
 			panic("ddl: unsupported identity kind")
 		}
 	}
-	if column.options.generated != nil {
+	if column.Options.Generated != nil {
 		c.Write(" GENERATED ALWAYS AS (")
-		c.Write(column.options.generated.expr)
+		c.Write(column.Options.Generated.Expr)
 		c.Write(")")
-		switch column.options.generated.kind {
+		switch column.Options.Generated.Kind {
 		case GeneratedStored:
 			c.Write(" STORED")
 		case GeneratedVirtual:
@@ -525,31 +525,31 @@ func (c *compiler) compileColumnGeneratedOptions(column ColumnDef) {
 }
 
 func (c *compiler) compileIndexKey(k IndexKey) {
-	c.Compile(k.expr)
+	c.Compile(k.Expr)
 
-	if k.options == nil {
+	if k.Options == nil {
 		return
 	}
-	if k.options.length > 0 {
+	if k.Options.Length > 0 {
 		c.Write("(")
-		c.WriteInt(k.options.length)
+		c.WriteInt(k.Options.Length)
 		c.Write(")")
 	}
-	if k.options.collation != "" {
+	if k.Options.Collation != "" {
 		c.Write(" COLLATE ")
-		c.Write(c.renderer.QuoteIdent(k.options.collation))
+		c.Write(c.renderer.QuoteIdent(k.Options.Collation))
 	}
-	if k.options.opclass != "" {
+	if k.Options.OpClass != "" {
 		c.Write(" ")
-		c.Write(k.options.opclass)
+		c.Write(k.Options.OpClass)
 	}
-	if k.options.sort != "" {
+	if k.Options.Sort != "" {
 		c.Write(" ")
-		c.Write(string(k.options.sort))
+		c.Write(string(k.Options.Sort))
 	}
-	if k.options.nulls != "" {
+	if k.Options.Nulls != "" {
 		c.Write(" NULLS ")
-		c.Write(string(k.options.nulls))
+		c.Write(string(k.Options.Nulls))
 	}
 }
 
@@ -627,39 +627,39 @@ func needsParentheses(childPrecedence, parentPrecedence int, parenthesizeOnEqual
 
 func (c *compiler) compileTableConstraint(table string, constraint TableConstraint) {
 	switch n := constraint.(type) {
-	case Constraint[primaryKey]:
+	case Constraint[PrimaryKeyKind]:
 		c.compilePrimaryKey(table, n)
-	case Constraint[unique]:
+	case Constraint[UniqueKind]:
 		c.compileUnique(table, n)
-	case Constraint[check]:
+	case Constraint[CheckKind]:
 		c.compileCheck(table, n)
 	case ForeignKeyConstraint:
 		c.compileForeignKey(table, n.Constraint)
-	case Constraint[foreignKey]:
+	case Constraint[ForeignKeyKind]:
 		c.compileForeignKey(table, n)
 	default:
 		panic(fmt.Errorf("unsupported table constraint %T", constraint))
 	}
 }
 
-func (c *compiler) compilePrimaryKey(table string, constraint Constraint[primaryKey]) {
-	parts := append([]string{table}, constraint.c.columns...)
-	name := constraintName(constraint.name, "pk", parts...)
-	c.compileNamedColumnConstraint(name, "PRIMARY KEY", constraint.c.columns)
+func (c *compiler) compilePrimaryKey(table string, constraint Constraint[PrimaryKeyKind]) {
+	parts := append([]string{table}, constraint.Kind.Columns...)
+	name := constraintName(constraint.Name, "pk", parts...)
+	c.compileNamedColumnConstraint(name, "PRIMARY KEY", constraint.Kind.Columns)
 }
 
-func (c *compiler) compileUnique(table string, constraint Constraint[unique]) {
-	parts := append([]string{table}, constraint.c.columns...)
-	name := constraintName(constraint.name, "uq", parts...)
-	c.compileNamedColumnConstraint(name, "UNIQUE", constraint.c.columns)
+func (c *compiler) compileUnique(table string, constraint Constraint[UniqueKind]) {
+	parts := append([]string{table}, constraint.Kind.Columns...)
+	name := constraintName(constraint.Name, "uq", parts...)
+	c.compileNamedColumnConstraint(name, "UNIQUE", constraint.Kind.Columns)
 }
 
-func (c *compiler) compileCheck(table string, constraint Constraint[check]) {
+func (c *compiler) compileCheck(table string, constraint Constraint[CheckKind]) {
 	var tmp strings.Builder
-	compileInto(&tmp, c.renderer, constraint.c.expr)
+	compileInto(&tmp, c.renderer, constraint.Kind.Expr)
 	sql := tmp.String()
 
-	name := constraint.name
+	name := constraint.Name
 	if name == nil {
 		fields := strings.Fields(strings.ToLower(sql))
 		normalized := strings.Join(fields, " ")
@@ -676,35 +676,35 @@ func (c *compiler) compileCheck(table string, constraint Constraint[check]) {
 	c.Write(")")
 }
 
-func (c *compiler) compileForeignKey(table string, constraint Constraint[foreignKey]) {
-	fk := constraint.c
-	if fk.reference == nil {
+func (c *compiler) compileForeignKey(table string, constraint Constraint[ForeignKeyKind]) {
+	fk := constraint.Kind
+	if fk.Reference == nil {
 		panic("foreign key reference is required")
 	}
-	if len(fk.reference.columns) > 0 && len(fk.srcCols) != len(fk.reference.columns) {
+	if len(fk.Reference.Columns) > 0 && len(fk.SourceColumns) != len(fk.Reference.Columns) {
 		panic("the number of columns on the left and right must match")
 	}
 
-	parts := append([]string{table}, fk.srcCols...)
-	parts = append(parts, fk.reference.table)
-	parts = append(parts, fk.reference.columns...)
-	name := constraintName(constraint.name, "fk", parts...)
+	parts := append([]string{table}, fk.SourceColumns...)
+	parts = append(parts, fk.Reference.Table)
+	parts = append(parts, fk.Reference.Columns...)
+	name := constraintName(constraint.Name, "fk", parts...)
 
-	c.compileNamedColumnConstraint(name, "FOREIGN KEY", fk.srcCols)
+	c.compileNamedColumnConstraint(name, "FOREIGN KEY", fk.SourceColumns)
 	c.Write(" REFERENCES ")
-	c.Write(c.renderer.QuoteIdent(fk.reference.table))
-	if len(fk.reference.columns) > 0 {
+	c.Write(c.renderer.QuoteIdent(fk.Reference.Table))
+	if len(fk.Reference.Columns) > 0 {
 		c.Write(" (")
-		c.compileColumnList(fk.reference.columns)
+		c.compileColumnList(fk.Reference.Columns)
 		c.Write(")")
 	}
-	if fk.options != nil && fk.options.onDelete != nil {
+	if fk.Options != nil && fk.Options.OnDelete != nil {
 		c.Write(" ON DELETE ")
-		c.Write(string(*fk.options.onDelete))
+		c.Write(string(*fk.Options.OnDelete))
 	}
-	if fk.options != nil && fk.options.onUpdate != nil {
+	if fk.Options != nil && fk.Options.OnUpdate != nil {
 		c.Write(" ON UPDATE ")
-		c.Write(string(*fk.options.onUpdate))
+		c.Write(string(*fk.Options.OnUpdate))
 	}
 }
 

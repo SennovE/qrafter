@@ -450,36 +450,6 @@ func appendPostgreSQLIndexes(tables map[tableKey]*Table, indexes map[indexKey]*I
 	}
 }
 
-type tableKey struct {
-	schema string
-	table  string
-}
-
-type indexKey struct {
-	schema string
-	table  string
-	index  string
-}
-
-func schemaFromTableMap(tables map[tableKey]*Table) Schema {
-	keys := make([]tableKey, 0, len(tables))
-	for key := range tables {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].schema == keys[j].schema {
-			return keys[i].table < keys[j].table
-		}
-		return keys[i].schema < keys[j].schema
-	})
-
-	schema := Schema{Tables: make([]Table, 0, len(keys))}
-	for _, key := range keys {
-		schema.Tables = append(schema.Tables, *tables[key])
-	}
-	return schema
-}
-
 func postgreSQLSchemaPredicate(alias string, options postgreSQLOptions) (predicate string, args []any) {
 	identifier := alias + ".nspname"
 	if options.allSchemas {

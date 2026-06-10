@@ -27,80 +27,86 @@ type constraintKind interface {
 
 // Constraint describes a table-level constraint.
 type Constraint[T constraintKind] struct {
-	name *string
-	c    T
+	Name *string
+	Kind T
 }
 
 func (Constraint[T]) tableConstraint() {}
 
 // Named returns a copy of the constraint with an explicit SQL name.
 func (c Constraint[T]) Named(name string) Constraint[T] {
-	c.name = &name
+	c.Name = &name
 	return c
 }
 
-type primaryKey struct {
-	columns []string
+// PrimaryKeyKind stores PRIMARY KEY constraint data.
+type PrimaryKeyKind struct {
+	Columns []string
 }
 
-func (primaryKey) constraintKind() {}
+func (PrimaryKeyKind) constraintKind() {}
 
 // PrimaryKey creates a table-level PRIMARY KEY constraint.
-func PrimaryKey(columns ...string) Constraint[primaryKey] {
-	return Constraint[primaryKey]{c: primaryKey{columns: columns}}
+func PrimaryKey(columns ...string) Constraint[PrimaryKeyKind] {
+	return Constraint[PrimaryKeyKind]{Kind: PrimaryKeyKind{Columns: append([]string(nil), columns...)}}
 }
 
-type unique struct {
-	columns []string
+// UniqueKind stores UNIQUE constraint data.
+type UniqueKind struct {
+	Columns []string
 }
 
-func (unique) constraintKind() {}
+func (UniqueKind) constraintKind() {}
 
 // Unique creates a table-level UNIQUE constraint.
-func Unique(columns ...string) Constraint[unique] {
-	return Constraint[unique]{c: unique{columns: columns}}
+func Unique(columns ...string) Constraint[UniqueKind] {
+	return Constraint[UniqueKind]{Kind: UniqueKind{Columns: append([]string(nil), columns...)}}
 }
 
-type check struct {
-	expr Predicate
+// CheckKind stores CHECK constraint data.
+type CheckKind struct {
+	Expr Predicate
 }
 
-func (check) constraintKind() {}
+func (CheckKind) constraintKind() {}
 
 // Check creates a table-level CHECK constraint.
-func Check(expr Predicate) Constraint[check] {
-	return Constraint[check]{c: check{expr: expr}}
+func Check(expr Predicate) Constraint[CheckKind] {
+	return Constraint[CheckKind]{Kind: CheckKind{Expr: expr}}
 }
 
 // ForeignKeyConstraint builds a table-level FOREIGN KEY constraint.
 type ForeignKeyConstraint struct {
-	Constraint[foreignKey]
+	Constraint[ForeignKeyKind]
 }
 
-type foreignKey struct {
-	srcCols   []string
-	reference *foreignKeyReference
-	options   *foreignKeyOptions
+// ForeignKeyKind stores FOREIGN KEY constraint data.
+type ForeignKeyKind struct {
+	SourceColumns []string
+	Reference     *ForeignKeyReference
+	Options       *ForeignKeyOptions
 }
 
-func (foreignKey) constraintKind() {}
+func (ForeignKeyKind) constraintKind() {}
 
-type foreignKeyReference struct {
-	table   string
-	columns []string
+// ForeignKeyReference stores the referenced table and columns.
+type ForeignKeyReference struct {
+	Table   string
+	Columns []string
 }
 
-type foreignKeyOptions struct {
-	onDelete *ReferenceAction
-	onUpdate *ReferenceAction
+// ForeignKeyOptions stores ON DELETE and ON UPDATE actions.
+type ForeignKeyOptions struct {
+	OnDelete *ReferenceAction
+	OnUpdate *ReferenceAction
 }
 
 // ForeignKey creates a table-level FOREIGN KEY constraint.
 func ForeignKey(columns ...string) ForeignKeyConstraint {
 	return ForeignKeyConstraint{
-		Constraint: Constraint[foreignKey]{
-			c: foreignKey{
-				srcCols: columns,
+		Constraint: Constraint[ForeignKeyKind]{
+			Kind: ForeignKeyKind{
+				SourceColumns: append([]string(nil), columns...),
 			},
 		},
 	}
@@ -108,26 +114,26 @@ func ForeignKey(columns ...string) ForeignKeyConstraint {
 
 // References sets the referenced table and columns for a FOREIGN KEY.
 func (c ForeignKeyConstraint) References(table string, columns ...string) ForeignKeyConstraint {
-	c.c.reference = &foreignKeyReference{
-		table:   table,
-		columns: append([]string(nil), columns...),
+	c.Kind.Reference = &ForeignKeyReference{
+		Table:   table,
+		Columns: append([]string(nil), columns...),
 	}
 	return c
 }
 
 // OnDelete sets the foreign key ON DELETE action.
 func (c ForeignKeyConstraint) OnDelete(action ReferenceAction) ForeignKeyConstraint {
-	options := c.c.cloneOptions()
-	options.onDelete = &action
-	c.c.options = options
+	options := c.Kind.cloneOptions()
+	options.OnDelete = &action
+	c.Kind.Options = options
 	return c
 }
 
 // OnUpdate sets the foreign key ON UPDATE action.
 func (c ForeignKeyConstraint) OnUpdate(action ReferenceAction) ForeignKeyConstraint {
-	options := c.c.cloneOptions()
-	options.onUpdate = &action
-	c.c.options = options
+	options := c.Kind.cloneOptions()
+	options.OnUpdate = &action
+	c.Kind.Options = options
 	return c
 }
 
@@ -137,10 +143,10 @@ func (c ForeignKeyConstraint) Named(name string) ForeignKeyConstraint {
 	return c
 }
 
-func (c foreignKey) cloneOptions() *foreignKeyOptions {
-	if c.options == nil {
-		return &foreignKeyOptions{}
+func (c ForeignKeyKind) cloneOptions() *ForeignKeyOptions {
+	if c.Options == nil {
+		return &ForeignKeyOptions{}
 	}
-	options := *c.options
+	options := *c.Options
 	return &options
 }

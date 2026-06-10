@@ -28,7 +28,7 @@ type ColumnConfig struct {
 }
 
 // ColumnsConfig describes explicit DDL overrides by column.
-type ColumnsConfig map[ddlColumn]ColumnConfig
+type ColumnsConfig map[DDLColumn]ColumnConfig
 
 // IndexesConfig describes additional table indexes.
 type IndexesConfig []ddl.CreateIndexStmt

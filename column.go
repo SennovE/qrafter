@@ -14,7 +14,8 @@ type Column[T any] struct {
 
 var _ core.Selecter = Column[int]{}
 
-type ddlColumn struct {
+// DDLColumn identifies a column in table DDL configuration.
+type DDLColumn struct {
 	Name string
 }
 
@@ -30,8 +31,8 @@ type ColumnRef interface {
 }
 
 // DDLKey returns struct that can be used in TableConfig.Columns
-func (c Column[T]) DDLKey() ddlColumn {
-	return ddlColumn{Name: c.name}
+func (c Column[T]) DDLKey() DDLColumn {
+	return DDLColumn{Name: c.name}
 }
 
 // TableRef returns the table reference associated with the column.

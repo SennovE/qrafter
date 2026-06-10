@@ -2,22 +2,23 @@ package ddl
 
 // ColumnDef describes a column inside CREATE TABLE or ALTER TABLE ADD COLUMN.
 type ColumnDef struct {
-	name string
-	typ  Type
+	Name string
+	Type Type
 
-	primaryKey bool
-	notNull    bool
-	unique     bool
+	IsPrimaryKey bool
+	IsNotNull    bool
+	IsUnique     bool
 
-	options *columnOptions
+	Options *ColumnOptions
 }
 
-type columnOptions struct {
-	defaultValue *columnDefault
-	identity     *columnIdentity
-	generated    *columnGenerated
-	checks       []columnCheck
-	references   *columnReferences
+// ColumnOptions stores optional column clauses.
+type ColumnOptions struct {
+	Default    *ColumnDefault
+	Identity   *ColumnIdentity
+	Generated  *ColumnGenerated
+	Checks     []ColumnCheck
+	References *ColumnReferences
 }
 
 // IdentityKind describes a generated identity column mode.
@@ -44,77 +45,82 @@ const (
 	GeneratedVirtual GeneratedKind = "virtual"
 )
 
-type columnDefault struct {
-	isExpr bool
-	value  any
-	expr   string
+// ColumnDefault describes a column DEFAULT clause.
+type ColumnDefault struct {
+	IsExpr bool
+	Value  any
+	Expr   string
 }
 
-type columnIdentity struct {
-	kind IdentityKind
+// ColumnIdentity describes a generated identity column clause.
+type ColumnIdentity struct {
+	Kind IdentityKind
 }
 
-type columnGenerated struct {
-	kind GeneratedKind
-	expr string
+// ColumnGenerated describes a generated column clause.
+type ColumnGenerated struct {
+	Kind GeneratedKind
+	Expr string
 }
 
-type columnCheck struct {
-	expr string
+// ColumnCheck describes a column-level CHECK clause.
+type ColumnCheck struct {
+	Expr string
 }
 
-type columnReferences struct {
-	table   string
-	columns []string
+// ColumnReferences describes a column-level REFERENCES clause.
+type ColumnReferences struct {
+	Table   string
+	Columns []string
 }
 
 // Column creates a column definition. Name can be a string or qrafter.Column.
 func Column(name string, typ Type) ColumnDef {
 	return ColumnDef{
-		name: name,
-		typ:  typ,
+		Name: name,
+		Type: typ,
 	}
 }
 
 // PrimaryKey marks the column as a primary key.
 // Inside CREATE TABLE it renders as a table-level constraint.
 func (c ColumnDef) PrimaryKey() ColumnDef {
-	c.primaryKey = true
+	c.IsPrimaryKey = true
 	return c
 }
 
 // NotNull adds a NOT NULL constraint.
 func (c ColumnDef) NotNull() ColumnDef {
-	c.notNull = true
+	c.IsNotNull = true
 	return c
 }
 
 // Null adds an explicit NULL marker.
 func (c ColumnDef) Null() ColumnDef {
-	c.notNull = false
+	c.IsNotNull = false
 	return c
 }
 
 // Unique adds a UNIQUE constraint.
 // Inside CREATE TABLE it renders as a table-level constraint.
 func (c ColumnDef) Unique() ColumnDef {
-	c.unique = true
+	c.IsUnique = true
 	return c
 }
 
 // Default adds a literal DEFAULT value rendered through the dialect.
 func (c ColumnDef) Default(value any) ColumnDef {
 	options := c.cloneOptions()
-	options.defaultValue = &columnDefault{value: value}
-	c.options = options
+	options.Default = &ColumnDefault{Value: value}
+	c.Options = options
 	return c
 }
 
 // DefaultExpr adds a raw SQL DEFAULT expression.
 func (c ColumnDef) DefaultExpr(expr string) ColumnDef {
 	options := c.cloneOptions()
-	options.defaultValue = &columnDefault{isExpr: true, expr: expr}
-	c.options = options
+	options.Default = &ColumnDefault{IsExpr: true, Expr: expr}
+	c.Options = options
 	return c
 }
 
@@ -126,8 +132,8 @@ func (c ColumnDef) Identity(kind IdentityKind) ColumnDef {
 		panic("ddl: unsupported identity kind")
 	}
 	options := c.cloneOptions()
-	options.identity = &columnIdentity{kind: kind}
-	c.options = options
+	options.Identity = &ColumnIdentity{Kind: kind}
+	c.Options = options
 	return c
 }
 
@@ -149,8 +155,8 @@ func (c ColumnDef) Generated(kind GeneratedKind, expr string) ColumnDef {
 		panic("ddl: unsupported generated column kind")
 	}
 	options := c.cloneOptions()
-	options.generated = &columnGenerated{kind: kind, expr: expr}
-	c.options = options
+	options.Generated = &ColumnGenerated{Kind: kind, Expr: expr}
+	c.Options = options
 	return c
 }
 
@@ -168,8 +174,8 @@ func (c ColumnDef) GeneratedVirtual(expr string) ColumnDef {
 // Inside CREATE TABLE it renders as a table-level constraint.
 func (c ColumnDef) Check(expr string) ColumnDef {
 	options := c.cloneOptions()
-	options.checks = append(options.checks, columnCheck{expr: expr})
-	c.options = options
+	options.Checks = append(options.Checks, ColumnCheck{Expr: expr})
+	c.Options = options
 	return c
 }
 
@@ -177,19 +183,19 @@ func (c ColumnDef) Check(expr string) ColumnDef {
 // Inside CREATE TABLE it renders as a table-level constraint.
 func (c ColumnDef) References(table string, columns ...string) ColumnDef {
 	options := c.cloneOptions()
-	options.references = &columnReferences{
-		table:   table,
-		columns: columns,
+	options.References = &ColumnReferences{
+		Table:   table,
+		Columns: append([]string(nil), columns...),
 	}
-	c.options = options
+	c.Options = options
 	return c
 }
 
-func (c ColumnDef) cloneOptions() *columnOptions {
-	if c.options == nil {
-		return &columnOptions{}
+func (c ColumnDef) cloneOptions() *ColumnOptions {
+	if c.Options == nil {
+		return &ColumnOptions{}
 	}
-	options := *c.options
-	options.checks = append([]columnCheck(nil), c.options.checks...)
+	options := *c.Options
+	options.Checks = append([]ColumnCheck(nil), c.Options.Checks...)
 	return &options
 }

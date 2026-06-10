@@ -7,15 +7,21 @@ import (
 	"github.com/SennovE/qrafter/ddl"
 )
 
+// UserStatus is a test enum used by Person.
 type UserStatus string
 
 const (
-	UserStatusActive  UserStatus = "active"
+	// UserStatusActive is an active user status.
+	UserStatusActive UserStatus = "active"
+	// UserStatusBlocked is a blocked user status.
 	UserStatusBlocked UserStatus = "blocked"
+	// UserStatusDeleted is a deleted user status.
 	UserStatusDeleted UserStatus = "deleted"
+	// UserStatusPending is a pending user status.
 	UserStatusPending UserStatus = "pending"
 )
 
+// Person is a schema-rich test table model.
 type Person struct {
 	q.Table `table:"users"`
 
@@ -45,7 +51,8 @@ type Person struct {
 	DeletedAt q.Column[*time.Time]
 }
 
-func (p Person) TableConfig() q.TableConfig {
+// TableConfig returns explicit schema metadata for Person.
+func (p Person) TableConfig() q.TableConfig { //nolint:gocritic // q.NewTable currently binds value table models.
 	return q.TableConfig{
 		Name:   "users",
 		Schema: "public",
@@ -67,16 +74,16 @@ func (p Person) TableConfig() q.TableConfig {
 			},
 
 			p.Status.DDLKey(): {
-				Default: ddl.Literal("'pending'"),
+				Default: ddl.RawExpr("'pending'"),
 			},
 
 			p.IsVerified.DDLKey(): {
-				Default: ddl.Literal("false"),
+				Default: ddl.Literal(false),
 			},
 
 			p.Profile.DDLKey(): {
 				Type:    ddl.JSONB(),
-				Default: ddl.Literal("'{}'::jsonb"),
+				Default: ddl.RawExpr("'{}'::jsonb"),
 			},
 		},
 
@@ -104,7 +111,7 @@ func (p Person) TableConfig() q.TableConfig {
 		Indexes: q.IndexesConfig{
 			ddl.IndexCols("ix_users_org_id", p.OrgID.Name()),
 
-			ddl.IndexCols("ix_users_org_id", p.Status.Name()),
+			ddl.IndexCols("ix_users_status", p.Status.Name()),
 
 			ddl.IndexCols("ix_users_org_active", p.OrgID.Name(), p.UserName.Name()).
 				Where(ddl.RawPred("deleted_at IS NULL AND status = 'active'")),

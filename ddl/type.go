@@ -9,47 +9,47 @@ import (
 
 // Type describes a SQL column type.
 type Type struct {
-	name        string
-	dialectName map[string]string
+	Name         string
+	DialectNames map[string]string
 }
 
 // IsZero reports whether the type has not been initialized.
 func (t Type) IsZero() bool {
-	return t.name == ""
+	return t.Name == ""
 }
 
 // SQLType creates a custom SQL type name.
 func SQLType(name string) Type {
-	return Type{name: name}
+	return Type{Name: name}
 }
 
 // ForDialect returns a copy of the type with a dialect-specific name.
 func (t Type) ForDialect(dialectName, name string) Type {
-	if t.dialectName == nil {
-		t.dialectName = make(map[string]string)
+	if t.DialectNames == nil {
+		t.DialectNames = make(map[string]string)
 	} else {
-		copied := make(map[string]string, len(t.dialectName)+1)
-		for key, value := range t.dialectName {
+		copied := make(map[string]string, len(t.DialectNames)+1)
+		for key, value := range t.DialectNames {
 			copied[key] = value
 		}
-		t.dialectName = copied
+		t.DialectNames = copied
 	}
-	t.dialectName[dialectName] = name
+	t.DialectNames[dialectName] = name
 	return t
 }
 
 func (t Type) render(d dialect.Renderer) string {
-	if t.name == "" {
+	if t.Name == "" {
 		panic(fmt.Errorf("ddl type is empty"))
 	}
 
 	name := dialect.UnwrapRenderer(d).DialectName()
-	for dialectName, typeName := range t.dialectName {
+	for dialectName, typeName := range t.DialectNames {
 		if strings.EqualFold(dialectName, name) {
 			return typeName
 		}
 	}
-	return t.name
+	return t.Name
 }
 
 // SmallInt returns a SMALLINT type.

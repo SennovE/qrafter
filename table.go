@@ -18,12 +18,15 @@ type TableRefProvider interface {
 
 // Table can be embedded into table models to provide table configuration.
 type Table struct {
-	config TableConfig
+	config *TableConfig
 }
 
 // TableConfig returns the embedded table configuration.
 func (t Table) TableConfig() TableConfig {
-	return t.config
+	if t.config == nil {
+		return TableConfig{}
+	}
+	return *t.config
 }
 
 // TableAlias returns a copy of a table model bound to a SQL alias.
@@ -133,7 +136,7 @@ func tableConfigFromFieldValue(v reflect.Value) TableConfig {
 	return v.Interface().(Table).TableConfig()
 }
 
-func setEmbeddedTableConfig(v reflect.Value, config TableConfig) {
+func setEmbeddedTableConfig(v reflect.Value, config *TableConfig) {
 	tableType := reflect.TypeOf(Table{})
 	t := v.Type()
 
@@ -148,7 +151,7 @@ func setEmbeddedTableConfig(v reflect.Value, config TableConfig) {
 	}
 }
 
-func setTableConfigField(v reflect.Value, config TableConfig) {
+func setTableConfigField(v reflect.Value, config *TableConfig) {
 	if v.Kind() == reflect.Pointer {
 		if v.IsNil() && v.CanSet() {
 			v.Set(reflect.New(v.Type().Elem()))
@@ -159,7 +162,8 @@ func setTableConfigField(v reflect.Value, config TableConfig) {
 		v = v.Elem()
 	}
 	if v.IsValid() && v.CanSet() && v.Type() == reflect.TypeOf(Table{}) {
-		v.Set(reflect.ValueOf(Table{config: config}))
+		configCopy := *config
+		v.Set(reflect.ValueOf(Table{config: &configCopy}))
 	}
 }
 

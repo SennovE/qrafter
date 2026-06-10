@@ -4,20 +4,20 @@ import "github.com/SennovE/qrafter/dialect"
 
 // CreateTableStmt builds a CREATE TABLE statement.
 type CreateTableStmt struct {
-	name        string
-	ifNotExists bool
-	columns     []ColumnDef
-	constraints []TableConstraint
+	TableName        string
+	IfNotExistsFlag  bool
+	ColumnDefs       []ColumnDef
+	TableConstraints []TableConstraint
 }
 
 // CreateTable starts a CREATE TABLE statement.
 func CreateTable(name string) CreateTableStmt {
-	return CreateTableStmt{name: name}
+	return CreateTableStmt{TableName: name}
 }
 
 // IfNotExists adds IF NOT EXISTS.
 func (s CreateTableStmt) IfNotExists() CreateTableStmt {
-	s.ifNotExists = true
+	s.IfNotExistsFlag = true
 	return s
 }
 
@@ -28,7 +28,7 @@ func (s CreateTableStmt) Column(name string, typ Type) CreateTableStmt {
 
 // Columns appends column definitions.
 func (s CreateTableStmt) Columns(columns ...ColumnDef) CreateTableStmt {
-	s.columns = append(s.columns, columns...)
+	s.ColumnDefs = append(s.ColumnDefs, columns...)
 	return s
 }
 
@@ -39,7 +39,7 @@ func (s CreateTableStmt) Constraint(constraint TableConstraint) CreateTableStmt 
 
 // Constraints appends table-level constraints.
 func (s CreateTableStmt) Constraints(constraints ...TableConstraint) CreateTableStmt {
-	s.constraints = append(s.constraints, constraints...)
+	s.TableConstraints = append(s.TableConstraints, constraints...)
 	return s
 }
 

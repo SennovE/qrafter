@@ -32,37 +32,38 @@ const (
 
 // IndexOption stores an index storage option added with CreateIndexStmt.With.
 type IndexOption struct {
-	name  string
-	value any
+	Name  string
+	Value any
 }
 
 // CreateIndexStmt builds a CREATE INDEX statement.
 type CreateIndexStmt struct {
-	name  string
-	table string
+	Name  string
+	Table string
 
-	keys []IndexKey
+	Keys []IndexKey
 
-	options *createIndexOptions
+	Options *CreateIndexOptions
 }
 
-type createIndexOptions struct {
-	include []Expression
+// CreateIndexOptions stores optional CREATE INDEX clauses.
+type CreateIndexOptions struct {
+	Include []Expression
 
-	unique       bool
-	ifNotExists  bool
-	concurrently bool
+	Unique       bool
+	IfNotExists  bool
+	Concurrently bool
 
-	method IndexMethod
+	Method IndexMethod
 
-	pred *Predicate
+	Predicate *Predicate
 
-	tablespace string
-	with       []IndexOption
+	Tablespace string
+	With       []IndexOption
 
-	clustered        *bool
-	invisible        bool
-	nullsNotDistinct bool
+	Clustered        *bool
+	Invisible        bool
+	NullsNotDistinct bool
 }
 
 // Index starts a table-detached CREATE INDEX statement.
@@ -77,22 +78,22 @@ func IndexCols(name string, cols ...string) CreateIndexStmt {
 
 // CreateIndex starts a CREATE INDEX statement.
 func CreateIndex(name string) CreateIndexStmt {
-	return CreateIndexStmt{name: name}
+	return CreateIndexStmt{Name: name}
 }
 
 // On sets the indexed table and key expressions.
 func (s CreateIndexStmt) On(table string, keys ...IndexKey) CreateIndexStmt {
-	s.table = table
-	s.keys = append([]IndexKey(nil), keys...)
+	s.Table = table
+	s.Keys = append([]IndexKey(nil), keys...)
 	return s
 }
 
 // OnCols sets the indexed table and simple column keys.
 func (s CreateIndexStmt) OnCols(table string, cols ...string) CreateIndexStmt {
-	s.table = table
-	s.keys = make([]IndexKey, 0, len(cols))
+	s.Table = table
+	s.Keys = make([]IndexKey, 0, len(cols))
 	for _, col := range cols {
-		s.keys = append(s.keys, KeyCol(col))
+		s.Keys = append(s.Keys, KeyCol(col))
 	}
 	return s
 }
@@ -100,67 +101,67 @@ func (s CreateIndexStmt) OnCols(table string, cols ...string) CreateIndexStmt {
 // Unique marks the index as UNIQUE.
 func (s CreateIndexStmt) Unique() CreateIndexStmt {
 	options := s.cloneOptions()
-	options.unique = true
-	s.options = options
+	options.Unique = true
+	s.Options = options
 	return s
 }
 
 // IfNotExists adds IF NOT EXISTS.
 func (s CreateIndexStmt) IfNotExists() CreateIndexStmt {
 	options := s.cloneOptions()
-	options.ifNotExists = true
-	s.options = options
+	options.IfNotExists = true
+	s.Options = options
 	return s
 }
 
 // Concurrently adds CONCURRENTLY for dialects that support it.
 func (s CreateIndexStmt) Concurrently() CreateIndexStmt {
 	options := s.cloneOptions()
-	options.concurrently = true
-	s.options = options
+	options.Concurrently = true
+	s.Options = options
 	return s
 }
 
 // Using sets the index access method.
 func (s CreateIndexStmt) Using(method IndexMethod) CreateIndexStmt {
 	options := s.cloneOptions()
-	options.method = method
-	s.options = options
+	options.Method = method
+	s.Options = options
 	return s
 }
 
 // Where adds a partial-index predicate.
 func (s CreateIndexStmt) Where(pred Predicate) CreateIndexStmt {
 	options := s.cloneOptions()
-	options.pred = &pred
-	s.options = options
+	options.Predicate = &pred
+	s.Options = options
 	return s
 }
 
 // Include adds non-key expressions to INCLUDE.
 func (s CreateIndexStmt) Include(exprs ...Expression) CreateIndexStmt {
 	options := s.cloneOptions()
-	options.include = append([]Expression(nil), exprs...)
-	s.options = options
+	options.Include = append([]Expression(nil), exprs...)
+	s.Options = options
 	return s
 }
 
 // Tablespace sets a TABLESPACE clause.
 func (s CreateIndexStmt) Tablespace(name string) CreateIndexStmt {
 	options := s.cloneOptions()
-	options.tablespace = name
-	s.options = options
+	options.Tablespace = name
+	s.Options = options
 	return s
 }
 
 // With adds an index storage option.
 func (s CreateIndexStmt) With(name string, value any) CreateIndexStmt {
 	options := s.cloneOptions()
-	options.with = append(options.with, IndexOption{
-		name:  name,
-		value: value,
+	options.With = append(options.With, IndexOption{
+		Name:  name,
+		Value: value,
 	})
-	s.options = options
+	s.Options = options
 	return s
 }
 
@@ -168,8 +169,8 @@ func (s CreateIndexStmt) With(name string, value any) CreateIndexStmt {
 func (s CreateIndexStmt) Clustered() CreateIndexStmt {
 	v := true
 	options := s.cloneOptions()
-	options.clustered = &v
-	s.options = options
+	options.Clustered = &v
+	s.Options = options
 	return s
 }
 
@@ -177,24 +178,24 @@ func (s CreateIndexStmt) Clustered() CreateIndexStmt {
 func (s CreateIndexStmt) NonClustered() CreateIndexStmt {
 	v := false
 	options := s.cloneOptions()
-	options.clustered = &v
-	s.options = options
+	options.Clustered = &v
+	s.Options = options
 	return s
 }
 
 // Invisible marks the index as INVISIBLE.
 func (s CreateIndexStmt) Invisible() CreateIndexStmt {
 	options := s.cloneOptions()
-	options.invisible = true
-	s.options = options
+	options.Invisible = true
+	s.Options = options
 	return s
 }
 
 // NullsNotDistinct adds NULLS NOT DISTINCT.
 func (s CreateIndexStmt) NullsNotDistinct() CreateIndexStmt {
 	options := s.cloneOptions()
-	options.nullsNotDistinct = true
-	s.options = options
+	options.NullsNotDistinct = true
+	s.Options = options
 	return s
 }
 
@@ -208,13 +209,13 @@ func (s CreateIndexStmt) MustRender(d dialect.Renderer) string {
 	return mustRender(d, s)
 }
 
-func (s CreateIndexStmt) cloneOptions() *createIndexOptions {
-	if s.options == nil {
-		return &createIndexOptions{}
+func (s CreateIndexStmt) cloneOptions() *CreateIndexOptions {
+	if s.Options == nil {
+		return &CreateIndexOptions{}
 	}
-	options := *s.options
-	options.include = append([]Expression(nil), s.options.include...)
-	options.with = append([]IndexOption(nil), s.options.with...)
+	options := *s.Options
+	options.Include = append([]Expression(nil), s.Options.Include...)
+	options.With = append([]IndexOption(nil), s.Options.With...)
 	return &options
 }
 

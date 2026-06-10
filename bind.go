@@ -41,7 +41,7 @@ func bindWithTableRef[T any](tableRef core.TableRef) (T, error) {
 	if v.Kind() != reflect.Struct {
 		return table, fmt.Errorf("type T must be a struct, got %s", v.Kind())
 	}
-	setEmbeddedTableConfig(v, TableConfig{Name: tableRef.Name})
+	setEmbeddedTableConfig(v, &TableConfig{Name: tableRef.Name})
 	t := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
