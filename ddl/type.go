@@ -20,7 +20,7 @@ func (t Type) IsZero() bool {
 
 // SQLType creates a custom SQL type name.
 func SQLType(name string) Type {
-	return Type{name: requireName("type", name)}
+	return Type{name: name}
 }
 
 // ForDialect returns a copy of the type with a dialect-specific name.
@@ -34,7 +34,7 @@ func (t Type) ForDialect(dialectName, name string) Type {
 		}
 		t.dialectName = copied
 	}
-	t.dialectName[requireName("dialect", dialectName)] = requireName("type", name)
+	t.dialectName[dialectName] = name
 	return t
 }
 

@@ -131,6 +131,12 @@ func (c ForeignKeyConstraint) OnUpdate(action ReferenceAction) ForeignKeyConstra
 	return c
 }
 
+// Named returns a copy of the constraint with an explicit SQL name.
+func (c ForeignKeyConstraint) Named(name string) ForeignKeyConstraint {
+	c.Constraint = c.Constraint.Named(name)
+	return c
+}
+
 func (c foreignKey) cloneOptions() *foreignKeyOptions {
 	if c.options == nil {
 		return &foreignKeyOptions{}

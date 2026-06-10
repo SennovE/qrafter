@@ -16,12 +16,6 @@ type TableRefProvider interface {
 	TableRef() core.TableRef
 }
 
-// TableConfig describes a SQL table.
-type TableConfig struct {
-	// Name is the SQL table name.
-	Name string
-}
-
 // Table can be embedded into table models to provide table configuration.
 type Table struct {
 	config TableConfig

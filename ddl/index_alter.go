@@ -33,7 +33,7 @@ func (s AlterIndexStmt) OnTable(name string) AlterIndexStmt {
 
 // Render renders the ALTER INDEX operations.
 func (s AlterIndexStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.

@@ -71,8 +71,5 @@ func columnNameForField(sf *reflect.StructField) string {
 	if name != "" {
 		return name
 	}
-	if NameMapper == nil {
-		return utils.ToSnake(sf.Name)
-	}
 	return NameMapper(sf.Name)
 }

@@ -35,27 +35,27 @@ var postgreSQLSimpleTypes = map[string]func() ddl.Type{
 	"float8":                      ddl.Double,
 }
 
-func postgreSQLType(typeName string) ddl.Type {
+func postgreSQLType(typeName string) (ddl.Type, bool) {
 	normalized := normalizePostgreSQLType(typeName)
 	if typeFunc, ok := postgreSQLSimpleTypes[normalized]; ok {
-		return typeFunc()
+		return typeFunc(), true
 	}
 	if size, ok := parsePostgreSQLSingleArgType(normalized, "character varying"); ok {
-		return ddl.VarChar(size)
+		return ddl.VarChar(size), true
 	}
 	if size, ok := parsePostgreSQLSingleArgType(normalized, "varchar"); ok {
-		return ddl.VarChar(size)
+		return ddl.VarChar(size), true
 	}
 	if size, ok := parsePostgreSQLSingleArgType(normalized, "character"); ok {
-		return ddl.Char(size)
+		return ddl.Char(size), true
 	}
 	if size, ok := parsePostgreSQLSingleArgType(normalized, "char"); ok {
-		return ddl.Char(size)
+		return ddl.Char(size), true
 	}
 	if precision, scale, ok := parsePostgreSQLNumericType(normalized); ok {
-		return ddl.Numeric(precision, scale)
+		return ddl.Numeric(precision, scale), true
 	}
-	return ddl.SQLType(typeName)
+	return ddl.SQLType(typeName), false
 }
 
 func normalizePostgreSQLType(typeName string) string {

@@ -312,7 +312,7 @@ func selectColumnValues(columns []ColumnRef, values []reflectedColumnValue) []co
 			row = append(row, asSelecter(value))
 			continue
 		}
-		row = append(row, asSelecter(byName[column.ColumnName()]))
+		row = append(row, asSelecter(byName[column.Name()]))
 	}
 
 	return row
@@ -321,6 +321,6 @@ func selectColumnValues(columns []ColumnRef, values []reflectedColumnValue) []co
 func columnKey(column ColumnRef) columnValueKey {
 	return columnValueKey{
 		table:  column.TableRef(),
-		column: column.ColumnName(),
+		column: column.Name(),
 	}
 }

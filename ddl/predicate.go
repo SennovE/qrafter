@@ -15,6 +15,11 @@ type Expression struct {
 	prec int
 }
 
+// IsZero reports whether the expression has not been initialized.
+func (e Expression) IsZero() bool {
+	return e.node == nil
+}
+
 type columnExpression struct {
 	name string
 }

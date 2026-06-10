@@ -17,7 +17,7 @@ type Statements []Renderer
 
 // Render renders all statements separated by semicolons.
 func (s Statements) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.
@@ -25,7 +25,8 @@ func (s Statements) MustRender(d dialect.Renderer) string {
 	return mustRender(d, s)
 }
 
-func render(d dialect.Renderer, node any) (sql string, err error) {
+// Render renders qrafter nodes into sql string
+func Render(d dialect.Renderer, node any) (sql string, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			sql = ""
@@ -39,7 +40,7 @@ func render(d dialect.Renderer, node any) (sql string, err error) {
 }
 
 func mustRender(d dialect.Renderer, node any) string {
-	sql, err := render(d, node)
+	sql, err := Render(d, node)
 	if err != nil {
 		panic(err)
 	}

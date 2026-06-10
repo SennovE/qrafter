@@ -111,7 +111,7 @@ func TestTable_MakeAliasWithExplicitConfig(t *testing.T) {
 func checkRenderedColumn[T any](t *testing.T, table, name string, expr qrafter.Column[T]) {
 	t.Helper()
 
-	assert.Equal(t, name, expr.ColumnName())
+	assert.Equal(t, name, expr.Name())
 	if expr.TableRef().Alias != "" {
 		assert.Equal(t, table, expr.TableRef().Alias)
 	} else {

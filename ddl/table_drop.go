@@ -42,7 +42,7 @@ func (s DropTableStmt) Restrict() DropTableStmt {
 
 // Render renders the DROP TABLE statement.
 func (s DropTableStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.

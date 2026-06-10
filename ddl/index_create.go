@@ -65,6 +65,16 @@ type createIndexOptions struct {
 	nullsNotDistinct bool
 }
 
+// Index starts a table-detached CREATE INDEX statement.
+func Index(name string, keys ...IndexKey) CreateIndexStmt {
+	return CreateIndex(name).On("", keys...)
+}
+
+// IndexCols starts a table-detached CREATE INDEX statement on simple columns.
+func IndexCols(name string, cols ...string) CreateIndexStmt {
+	return CreateIndex(name).OnCols("", cols...)
+}
+
 // CreateIndex starts a CREATE INDEX statement.
 func CreateIndex(name string) CreateIndexStmt {
 	return CreateIndexStmt{name: name}
@@ -190,7 +200,7 @@ func (s CreateIndexStmt) NullsNotDistinct() CreateIndexStmt {
 
 // Render renders the CREATE INDEX operations.
 func (s CreateIndexStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.

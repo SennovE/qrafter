@@ -9,8 +9,8 @@ type AlterTableStmt struct {
 }
 
 // AlterTable starts an ALTER TABLE statement.
-func AlterTable(table any) AlterTableStmt {
-	return AlterTableStmt{table: tableName(table)}
+func AlterTable(table string) AlterTableStmt {
+	return AlterTableStmt{table: table}
 }
 
 type renameColumnStmt struct {
@@ -163,7 +163,7 @@ func (s AlterTableStmt) RenameConstraint(column, name string) AlterTableStmt {
 
 // Render renders the ALTER TABLE operations.
 func (s AlterTableStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.

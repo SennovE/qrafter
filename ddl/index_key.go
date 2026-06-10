@@ -73,7 +73,7 @@ func (k IndexKey) NullsLast() IndexKey {
 // Collate adds a collation name to the key.
 func (k IndexKey) Collate(name string) IndexKey {
 	options := k.cloneOptions()
-	options.collation = requireName("collation", name)
+	options.collation = name
 	k.options = options
 	return k
 }
@@ -81,7 +81,7 @@ func (k IndexKey) Collate(name string) IndexKey {
 // OpClass adds an operator class to the key.
 func (k IndexKey) OpClass(name string) IndexKey {
 	options := k.cloneOptions()
-	options.opclass = requireName("operator class", name)
+	options.opclass = name
 	k.options = options
 	return k
 }

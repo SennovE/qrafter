@@ -545,7 +545,7 @@ func (c *compiler) compileTable(t core.TableRef) {
 func (c *compiler) compileColumn(col ColumnRef) {
 	c.Write(c.renderer.QuoteIdent(col.TableRef().SQLName()))
 	c.Write(".")
-	c.Write(c.renderer.QuoteIdent(col.ColumnName()))
+	c.Write(c.renderer.QuoteIdent(col.Name()))
 }
 
 func (c *compiler) compileArg(arg expr.ArgExpression) {
@@ -672,7 +672,7 @@ func (c *compiler) compileInsertColumns(columns []ColumnRef) {
 		if i > 0 {
 			c.Write(", ")
 		}
-		c.Write(c.renderer.QuoteIdent(column.ColumnName()))
+		c.Write(c.renderer.QuoteIdent(column.Name()))
 	}
 	c.Write(")")
 }
@@ -694,7 +694,7 @@ func (c *compiler) compileUpdateAssignments(assignments []updateAssignment) {
 		if i > 0 {
 			c.Write(", ")
 		}
-		c.Write(c.renderer.QuoteIdent(assignment.column.ColumnName()))
+		c.Write(c.renderer.QuoteIdent(assignment.column.Name()))
 		c.Write(" = ")
 		c.Compile(assignment.value)
 	}

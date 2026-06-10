@@ -7,7 +7,7 @@ import (
 )
 
 func TestColumnPredicateRendersColumnAsIdentifier(t *testing.T) {
-	sql, err := render(dialect.PostgreSQL{}, Col("age").Ge(0))
+	sql, err := Render(dialect.PostgreSQL{}, Col("age").Ge(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,7 +18,7 @@ func TestColumnPredicateRendersColumnAsIdentifier(t *testing.T) {
 }
 
 func TestColumnPredicateKeepsStringValuesAsLiterals(t *testing.T) {
-	sql, err := render(dialect.PostgreSQL{}, Col("status").Eq("active"))
+	sql, err := Render(dialect.PostgreSQL{}, Col("status").Eq("active"))
 	if err != nil {
 		t.Fatal(err)
 	}

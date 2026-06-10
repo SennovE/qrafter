@@ -204,7 +204,7 @@ func readPostgreSQLColumns(
 		}
 
 		column.DatabaseType = typeName
-		column.Type = postgreSQLType(typeName)
+		column.Type, _ = postgreSQLType(typeName)
 		column.Identity = postgresIdentityKind(identity)
 		column.Generated = postgresGeneratedKind(generated)
 		if defaultExpr.Valid {

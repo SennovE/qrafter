@@ -58,7 +58,7 @@ func (s DropIndexStmt) Online() DropIndexStmt {
 
 // Render renders the DROP INDEX operations.
 func (s DropIndexStmt) Render(d dialect.Renderer) (string, error) {
-	return render(d, s)
+	return Render(d, s)
 }
 
 // MustRender is like Render but panics if rendering fails.
