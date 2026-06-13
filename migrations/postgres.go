@@ -97,11 +97,6 @@ func (p PostgreSQL) ReadSchema(ctx context.Context, db Database) (Schema, error)
 	return schema, nil
 }
 
-// ReadDDL reads a PostgreSQL schema and converts it into ddl statements.
-func (p PostgreSQL) ReadDDL(ctx context.Context, db Database) (ddl.Statements, error) {
-	return ReadDDL(ctx, db, p)
-}
-
 func defaultPostgreSQLOptions() postgreSQLOptions {
 	return postgreSQLOptions{schemas: []string{defaultPostgreSQLSchema}}
 }
@@ -320,7 +315,7 @@ func readPostgreSQLIndexMetadata(
 
 	query := strings.Replace(
 		getPostgeSQLIndexMetadata,
-		"NULLS_NOT_DISTINCT",
+		"{{NULLS_NOT_DISTINCT}}",
 		nullsNotDistinct,
 		1,
 	)
@@ -384,7 +379,7 @@ func readPostgreSQLIndexKeys(
 	predicate, args := postgreSQLSchemaPredicate("n", options)
 	query := strings.Replace(
 		getPostgeSQLIndexKeys,
-		"KEY_LIMIT",
+		"{{KEY_LIMIT}}",
 		keyLimit,
 		1,
 	)

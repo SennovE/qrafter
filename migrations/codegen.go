@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"go/format"
-	"go/token"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,94 +11,15 @@ import (
 	"github.com/SennovE/qrafter/ddl"
 )
 
-const (
-	defaultMigrationPackageName  = "migrations"
-	defaultMigrationUpFuncName   = "Up"
-	defaultMigrationDownFuncName = "Down"
-	ddlCodeQualifier             = "qddl."
-	ddlImportPath                = "github.com/SennovE/qrafter/ddl"
-)
+const ddlCodeQualifier = "qddl."
 
-// MigrationCodeOptions configures generated Go migration code.
-type MigrationCodeOptions struct {
-	PackageName  string
-	UpFuncName   string
-	DownFuncName string
-}
-
-// GenerateMigrationCodeFromDiff generates Go code with ddl-based Up and Down
-// functions for the given schema diff.
-func GenerateMigrationCodeFromDiff(diff SchemaDiff, options MigrationCodeOptions) ([]byte, error) {
-	options = defaultMigrationCodeOptions(options)
-	if err := validateMigrationCodeOptions(options); err != nil {
-		return nil, err
-	}
-
-	var b strings.Builder
+func generateMigrationFileText(diff SchemaDiff, migrationNumber string) ([]byte, error) {
 	steps := migrationSteps(diff)
-
-	fmt.Fprintf(&b, "package %s\n\n", options.PackageName)
-	fmt.Fprintf(&b, "import qddl %q\n\n", ddlImportPath)
-	writeMigrationFunc(&b, options.UpFuncName, upStepCodes(steps))
-	b.WriteString("\n")
-	writeMigrationFunc(&b, options.DownFuncName, downStepCodes(steps))
-
-	src, err := format.Source([]byte(b.String()))
-	if err != nil {
-		return nil, fmt.Errorf("format generated migration code: %w", err)
-	}
-	return src, nil
-}
-
-func defaultMigrationCodeOptions(options MigrationCodeOptions) MigrationCodeOptions {
-	if options.PackageName == "" {
-		options.PackageName = defaultMigrationPackageName
-	}
-	if options.UpFuncName == "" {
-		options.UpFuncName = defaultMigrationUpFuncName
-	}
-	if options.DownFuncName == "" {
-		options.DownFuncName = defaultMigrationDownFuncName
-	}
-	return options
-}
-
-func validateMigrationCodeOptions(options MigrationCodeOptions) error {
-	if !validGoIdentifier(options.PackageName) {
-		return fmt.Errorf("migrations: invalid package name %q", options.PackageName)
-	}
-	if !validGoIdentifier(options.UpFuncName) {
-		return fmt.Errorf("migrations: invalid up function name %q", options.UpFuncName)
-	}
-	if !validGoIdentifier(options.DownFuncName) {
-		return fmt.Errorf("migrations: invalid down function name %q", options.DownFuncName)
-	}
-	if options.UpFuncName == options.DownFuncName {
-		return fmt.Errorf("migrations: up and down function names must differ")
-	}
-	return nil
-}
-
-func validGoIdentifier(name string) bool {
-	return name != "_" && token.IsIdentifier(name) && !token.Lookup(name).IsKeyword()
-}
-
-func writeMigrationFunc(b *strings.Builder, name string, statements []string) {
-	fmt.Fprintf(b, "func %s() %sStatements {\n", name, ddlCodeQualifier)
-	if len(statements) == 0 {
-		b.WriteString("\treturn nil\n")
-		b.WriteString("}\n")
-		return
-	}
-
-	fmt.Fprintf(b, "\treturn %sStatements{\n", ddlCodeQualifier)
-	for i := range statements {
-		b.WriteString("\t\t")
-		b.WriteString(statements[i])
-		b.WriteString(",\n")
-	}
-	b.WriteString("\t}\n")
-	b.WriteString("}\n")
+	return renderMigrationCodeTemplate(migrationTemplateData{
+		MigrationNumber: migrationNumber,
+		UpStatements:    upStepCodes(steps),
+		DownStatements:  downStepCodes(steps),
+	})
 }
 
 func upStepCodes(steps []migrationStep) []string {

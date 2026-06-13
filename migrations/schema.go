@@ -3,12 +3,20 @@ package migrations
 import (
 	"sort"
 
+	"github.com/SennovE/qrafter"
 	"github.com/SennovE/qrafter/ddl"
+	"github.com/SennovE/qrafter/dialect"
 )
 
 // Schema is a normalized database schema snapshot.
 type Schema struct {
 	Tables []Table
+}
+
+// RegisterTable appends the schema inferred from table config T to schema.
+func RegisterTable[T qrafter.TableConfigProvider](schema *Schema, d dialect.Renderer) {
+	newSchema := TableConfigToSchema[T](d)
+	schema.Tables = append(schema.Tables, newSchema.Tables...)
 }
 
 // DDL converts the schema snapshot into ddl statements.

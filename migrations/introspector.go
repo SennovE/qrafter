@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/SennovE/qrafter/ddl"
 )
 
 // Database is implemented by *sql.DB, *sql.Tx, and *sql.Conn.
@@ -19,19 +17,48 @@ type Introspector interface {
 	ReadSchema(ctx context.Context, db Database) (Schema, error)
 }
 
-// ReadSchema reads a database schema with the given DBMS introspector.
-func ReadSchema(ctx context.Context, db Database, introspector Introspector) (Schema, error) {
+func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*SchemaDiff, error) {
+	db, closeDB, err := migrationDatabase(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = closeDB() }()
+
+	current, err := readSchema(ctx, db, config.Introspector)
+	if err != nil {
+		return nil, err
+	}
+
+	desired := cloneNormalizedSchema(config.Desired)
+	diff := DiffSchemas(current, desired)
+	return &diff, nil
+}
+
+func readSchema(ctx context.Context, db Database, introspector Introspector) (Schema, error) {
 	if introspector == nil {
 		return Schema{}, fmt.Errorf("migrations: introspector is nil")
 	}
 	return introspector.ReadSchema(ctx, db)
 }
 
-// ReadDDL reads a database schema and converts it into ddl statements.
-func ReadDDL(ctx context.Context, db Database, introspector Introspector) (ddl.Statements, error) {
-	schema, err := ReadSchema(ctx, db, introspector)
-	if err != nil {
-		return nil, err
+func migrationDatabase(ctx context.Context, config *MigrationToolConfig) (Database, func() error, error) {
+	if config.DB != nil {
+		return config.DB, noopClose, nil
 	}
-	return schema.DDL(), nil
+
+	db, err := sql.Open(config.DriverName, config.DataSourceName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open database: %w", err)
+	}
+	if err := db.PingContext(ctx); err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, nil, fmt.Errorf("ping database: %w; close database: %v", err, closeErr)
+		}
+		return nil, nil, fmt.Errorf("ping database: %w", err)
+	}
+	return db, db.Close, nil
+}
+
+func noopClose() error {
+	return nil
 }
