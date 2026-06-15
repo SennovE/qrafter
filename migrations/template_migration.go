@@ -88,12 +88,13 @@ func MakeMigration(ctx context.Context, comment, outDir string, config *Migratio
 	if outDir == "" {
 		outDir = "."
 	}
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return "", fmt.Errorf("create migration directory: %w", err)
 	}
 
 	path := filepath.Join(outDir, filename)
 
+	// #nosec G304 -- path is generated inside the caller-provided migration output directory.
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, defaultMigrationFileMode)
 	if err != nil {
 		return "", fmt.Errorf("create migration file: %w", err)
@@ -128,7 +129,7 @@ func revision() string {
 	return time.Now().UTC().Format(defaultRevisionTimeLayout)
 }
 
-func migrationFileName(comment string) (string, string) {
+func migrationFileName(comment string) (filename, migrationNumber string) {
 	revision := revision()
 	if comment == "" {
 		comment = defaultMigrationName

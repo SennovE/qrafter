@@ -1,14 +1,14 @@
+// Command qrafter-migrations scaffolds helper commands for qrafter migrations.
 package main
 
 import (
 	"os"
-	
+
 	qmig "github.com/SennovE/qrafter/migrations"
 )
 
 func main() {
-	switch os.Args[1] {
-	case "init":
+	if os.Args[1] == "init" {
 		path, options, err := qmig.RevisionCommandOptionsFromArgs(os.Args[2:])
 		if err != nil {
 			panic(err)

@@ -13,6 +13,29 @@ import (
 
 const ddlCodeQualifier = "qddl."
 
+var simpleDDLTypeCodes = []struct {
+	code string
+	typ  ddl.Type
+}{
+	{"SmallInt", ddl.SmallInt()},
+	{"Integer", ddl.Integer()},
+	{"BigInt", ddl.BigInt()},
+	{"Serial", ddl.Serial()},
+	{"BigSerial", ddl.BigSerial()},
+	{"Text", ddl.Text()},
+	{"Boolean", ddl.Boolean()},
+	{"Date", ddl.Date()},
+	{"Time", ddl.Time()},
+	{"Timestamp", ddl.Timestamp()},
+	{"TimestampTZ", ddl.TimestampTZ()},
+	{"UUID", ddl.UUID()},
+	{"JSON", ddl.JSON()},
+	{"JSONB", ddl.JSONB()},
+	{"Binary", ddl.Binary()},
+	{"Float", ddl.Float()},
+	{"Double", ddl.Double()},
+}
+
 func generateMigrationFileText(diff SchemaDiff, migrationNumber string) ([]byte, error) {
 	steps := migrationSteps(diff)
 	return renderMigrationCodeTemplate(migrationTemplateData{
@@ -49,33 +72,35 @@ func createTableCode(table *Table) string {
 	code.WriteString(quoteCode(table.Name))
 	code.WriteString(")")
 	if len(table.Columns) > 0 {
-		code.WriteString(".Columns(")
+		code.WriteString(".\n\tColumns(\n")
 		joinColumnCodes(&code, table.Columns)
-		code.WriteString(")")
+		code.WriteString("\t)")
 	}
 	if len(table.Constraints) > 0 {
-		code.WriteString(".Constraints(")
+		code.WriteString(".\n\tConstraints(\n")
 		joinConstraintCodes(&code, table.Name, table.Constraints)
-		code.WriteString(")")
+		code.WriteString("\t)")
 	}
 	return code.String()
 }
 
 func joinColumnCodes(w *strings.Builder, columns []Column) {
-	for _, col := range columns {
-		columnCode(w, &col)
-		w.WriteString(", ")
+	for i := range columns {
+		writeIndentedCode(w, columnCode(&columns[i]), "\t\t")
+		w.WriteString(",\n")
 	}
 }
 
 func joinConstraintCodes(w *strings.Builder, table string, constraints []Constraint) {
-	for _, constr := range constraints {
-		constraintCode(w, table, &constr)
-		w.WriteString(", ")
+	for i := range constraints {
+		writeIndentedCode(w, constraintCode(table, &constraints[i]), "\t\t")
+		w.WriteString(",\n")
 	}
 }
 
-func columnCode(w *strings.Builder, column *Column) {
+func columnCode(column *Column) string {
+	var code strings.Builder
+	w := &code
 	w.WriteString(ddlCodeQualifier)
 	w.WriteString("Column(")
 	w.WriteString(quoteCode(column.Name))
@@ -106,22 +131,101 @@ func columnCode(w *strings.Builder, column *Column) {
 		w.WriteString(quoteCode(column.DefaultExpr))
 		w.WriteString(")")
 	}
+	return code.String()
 }
 
 func typeCode(typ ddl.Type) string {
-	code := ddlCodeQualifier + "SQLType(" + quoteCode(typ.Name) + ")"
+	if code, ok := simpleTypeCode(typ); ok {
+		return code
+	}
+	if code, ok := parameterizedTypeCode(typ); ok {
+		return code
+	}
+
 	keys := make([]string, 0, len(typ.DialectNames))
 	for dialectName := range typ.DialectNames {
 		keys = append(keys, dialectName)
 	}
 	sort.Strings(keys)
-	for _, dialectName := range keys {
-		code += ".ForDialect(" + quoteCode(dialectName) + ", " + quoteCode(typ.DialectNames[dialectName]) + ")"
+	if len(keys) == 0 {
+		return ddlCodeQualifier + "SQLType(" + quoteCode(typ.Name) + ")"
 	}
-	return code
+
+	var code strings.Builder
+	code.WriteString(ddlCodeQualifier + "SQLType(" + quoteCode(typ.Name) + ")")
+	for _, dialectName := range keys {
+		code.WriteString(".ForDialect(" + quoteCode(dialectName) + ", " + quoteCode(typ.DialectNames[dialectName]) + ")")
+	}
+	return code.String()
 }
 
-func constraintCode(w *strings.Builder, table string, constraint *Constraint) {
+func simpleTypeCode(typ ddl.Type) (string, bool) {
+	for i := range simpleDDLTypeCodes {
+		if typesEqual(typ, simpleDDLTypeCodes[i].typ) {
+			return ddlCodeQualifier + simpleDDLTypeCodes[i].code + "()", true
+		}
+	}
+	return "", false
+}
+
+func parameterizedTypeCode(typ ddl.Type) (string, bool) {
+	if len(typ.DialectNames) > 0 {
+		return "", false
+	}
+	if size, ok := parseWrappedIntType(typ.Name, "VARCHAR"); ok {
+		return ddlCodeQualifier + "VarChar(" + strconv.Itoa(size) + ")", true
+	}
+	if size, ok := parseWrappedIntType(typ.Name, "CHAR"); ok {
+		return ddlCodeQualifier + "Char(" + strconv.Itoa(size) + ")", true
+	}
+	if precision, scale, ok := parseNumericTypeCodeArgs(typ.Name); ok {
+		return ddlCodeQualifier + "Numeric(" + strconv.Itoa(precision) + ", " + strconv.Itoa(scale) + ")", true
+	}
+	return "", false
+}
+
+func parseWrappedIntType(name, prefix string) (int, bool) {
+	inner, ok := parseTypeCodeArgs(name, prefix)
+	if !ok {
+		return 0, false
+	}
+	size, err := strconv.Atoi(strings.TrimSpace(inner))
+	return size, err == nil && size > 0
+}
+
+func parseNumericTypeCodeArgs(name string) (precision, scale int, ok bool) {
+	inner, ok := parseTypeCodeArgs(name, "NUMERIC")
+	if !ok {
+		return 0, 0, false
+	}
+	parts := strings.Split(inner, ",")
+	if len(parts) == 0 || len(parts) > 2 {
+		return 0, 0, false
+	}
+	precision, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil || precision <= 0 {
+		return 0, 0, false
+	}
+	if len(parts) == 1 {
+		return precision, 0, true
+	}
+	scale, err = strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil || scale < 0 {
+		return 0, 0, false
+	}
+	return precision, scale, true
+}
+
+func parseTypeCodeArgs(name, prefix string) (string, bool) {
+	if !strings.HasPrefix(name, prefix+"(") || !strings.HasSuffix(name, ")") {
+		return "", false
+	}
+	return name[len(prefix)+1 : len(name)-1], true
+}
+
+func constraintCode(table string, constraint *Constraint) string {
+	var code strings.Builder
+	w := &code
 	switch constraint.Kind {
 	case ConstraintPrimaryKey:
 		w.WriteString(ddlCodeQualifier)
@@ -145,12 +249,12 @@ func constraintCode(w *strings.Builder, table string, constraint *Constraint) {
 	default:
 		panic("unsupported constraint " + string(constraint.Kind))
 	}
-	if constraint.Name == "" {
-		return
+	if constraint.Name != "" {
+		w.WriteString(".Named(")
+		w.WriteString(quoteCode(constraintDropName(table, constraint)))
+		w.WriteString(")")
 	}
-	w.WriteString(".Named(")
-	w.WriteString(quoteCode(constraintDropName(table, constraint)))
-	w.WriteString(")")
+	return code.String()
 }
 
 func foreignKeyCode(w *strings.Builder, constraint *Constraint) {
@@ -199,38 +303,45 @@ func createIndexCode(index *Index) string {
 	code.WriteString(ddlCodeQualifier)
 	code.WriteString("CreateIndex(")
 	code.WriteString(quoteCode(index.Name))
-	code.WriteString(").On(")
+	code.WriteString(").On(\n\t\t")
 	code.WriteString(quoteCode(index.TableName))
 	for i := range index.Keys {
-		code.WriteString(", ")
-		code.WriteString(ddlCodeQualifier)
-		code.WriteString("Key(")
-		code.WriteString(ddlCodeQualifier)
-		code.WriteString("RawExpr(")
-		code.WriteString(quoteCode(index.Keys[i].Expression))
-		code.WriteString("))")
+		code.WriteString(",\n")
+		code.WriteString(indexKeyCode(&index.Keys[i]))
 	}
-	code.WriteString(")")
+	code.WriteString(",\n\t)")
 
 	if index.Unique {
-		code.WriteString(".Unique()")
+		code.WriteString(".\n\tUnique()")
 	}
 	if index.Method != "" {
-		code.WriteString(".Using(" + indexMethodCode(index.Method) + ")")
+		code.WriteString(".\n\tUsing(" + indexMethodCode(index.Method) + ")")
 	}
 	if len(index.Include) > 0 {
-		code.WriteString(".Include(" + rawExpressionArgsCode(index.Include) + ")")
+		code.WriteString(".\n\tInclude(\n")
+		for _, expr := range index.Include {
+			writeIndentedCode(&code, rawExpressionCode(expr), "\t\t")
+			code.WriteString(",\n")
+		}
+		code.WriteString("\t)")
 	}
 	if index.NullsNotDistinct {
-		code.WriteString(".NullsNotDistinct()")
+		code.WriteString(".\n\tNullsNotDistinct()")
 	}
 	if index.Tablespace != "" {
-		code.WriteString(".Tablespace(" + quoteCode(index.Tablespace) + ")")
+		code.WriteString(".\n\tTablespace(" + quoteCode(index.Tablespace) + ")")
 	}
 	if index.Predicate != "" {
-		code.WriteString(".Where(" + ddlCodeQualifier + "RawPred(" + quoteCode(index.Predicate) + "))")
+		code.WriteString(".\n\tWhere(" + ddlCodeQualifier + "RawPred(" + quoteCode(index.Predicate) + "))")
 	}
 	return code.String()
+}
+
+func indexKeyCode(key *IndexKey) string {
+	if column, ok := simpleColumnExpression(key.Expression); ok {
+		return ddlCodeQualifier + "KeyCol(" + quoteCode(column) + ")"
+	}
+	return ddlCodeQualifier + "Key(" + rawExpressionCode(key.Expression) + ")"
 }
 
 func indexMethodCode(method ddl.IndexMethod) string {
@@ -271,9 +382,9 @@ func dropIndexCode(index string) string {
 func addColumnCode(table string, column *Column) string {
 	var code strings.Builder
 	code.WriteString(alterTableCode(table))
-	code.WriteString(".AddColumn(")
-	columnCode(&code, column)
-	code.WriteString(")")
+	code.WriteString(".AddColumn(\n")
+	writeIndentedCode(&code, columnCode(column), "\t\t")
+	code.WriteString(",\n\t)")
 	return code.String()
 }
 
@@ -284,25 +395,31 @@ func dropColumnCode(table, column string) string {
 func replaceColumnCode(table, dropColumn string, addColumn *Column) string {
 	var code strings.Builder
 	code.WriteString(alterTableCode(table))
-	code.WriteString(".DropColumn(")
+	code.WriteString(".\n\tDropColumn(")
 	code.WriteString(quoteCode(dropColumn))
 	code.WriteString(")")
-	code.WriteString(".AddColumn(")
-	columnCode(&code, addColumn)
-	code.WriteString(")")
+	code.WriteString(".\n\tAddColumn(\n")
+	writeIndentedCode(&code, columnCode(addColumn), "\t\t")
+	code.WriteString(",\n\t)")
 	return code.String()
 }
 
 func alterColumnTypeCode(table string, column *Column) string {
-	return alterTableCode(table) +
-		".AlterColumnType(" + quoteCode(column.Name) + ", " + typeCode(column.ddlType()) + ")"
+	var code strings.Builder
+	code.WriteString(alterTableCode(table))
+	code.WriteString(".AlterColumnType(")
+	code.WriteString(quoteCode(column.Name))
+	code.WriteString(", ")
+	code.WriteString(typeCode(column.ddlType()))
+	code.WriteString(")")
+	return code.String()
 }
 
 func notNullCode(table string, column *Column) string {
 	if column.NotNull {
-		return alterTableCode(table) + ".SetNotNull(" + quoteCode(column.Name) + ")"
+		return alterTableCode(table) + ".\n\tSetNotNull(" + quoteCode(column.Name) + ")"
 	}
-	return alterTableCode(table) + ".DropNotNull(" + quoteCode(column.Name) + ")"
+	return alterTableCode(table) + ".\n\tDropNotNull(" + quoteCode(column.Name) + ")"
 }
 
 func defaultCode(table string, column *Column) string {
@@ -316,9 +433,9 @@ func defaultCode(table string, column *Column) string {
 func addConstraintCode(table string, constraint *Constraint) string {
 	var code strings.Builder
 	code.WriteString(alterTableCode(table))
-	code.WriteString(".AddConstraint(")
-	constraintCode(&code, table, constraint)
-	code.WriteString(")")
+	code.WriteString(".AddConstraint(\n")
+	code.WriteString(constraintCode(table, constraint))
+	code.WriteString(",\n\t)")
 	return code.String()
 }
 
@@ -330,12 +447,86 @@ func alterTableCode(table string) string {
 	return ddlCodeQualifier + "AlterTable(" + quoteCode(table) + ")"
 }
 
-func rawExpressionArgsCode(expressions []string) string {
-	items := make([]string, len(expressions))
-	for i := range expressions {
-		items[i] = ddlCodeQualifier + "RawExpr(" + quoteCode(expressions[i]) + ")"
+func rawExpressionCode(expression string) string {
+	if column, ok := simpleColumnExpression(expression); ok {
+		return ddlCodeQualifier + "Col(" + quoteCode(column) + ")"
 	}
-	return strings.Join(items, ", ")
+	return ddlCodeQualifier + "RawExpr(" + quoteCode(expression) + ")"
+}
+
+func writeIndentedCode(w *strings.Builder, code, indent string) {
+	lines := strings.Split(code, "\n")
+	for i, line := range lines {
+		if line != "" {
+			w.WriteString(indent)
+			w.WriteString(line)
+		}
+		if i < len(lines)-1 {
+			w.WriteString("\n")
+		}
+	}
+}
+
+func simpleColumnExpression(expression string) (string, bool) {
+	expression = strings.TrimSpace(expression)
+	if expression == "" {
+		return "", false
+	}
+	if strings.HasPrefix(expression, `"`) {
+		return parseQuotedIdentifierExpression(expression)
+	}
+	if !isUnquotedIdentifier(expression) {
+		return "", false
+	}
+	return expression, true
+}
+
+func parseQuotedIdentifierExpression(expression string) (string, bool) {
+	var name strings.Builder
+	for i := 1; i < len(expression); i++ {
+		if expression[i] != '"' {
+			name.WriteByte(expression[i])
+			continue
+		}
+		if i+1 < len(expression) && expression[i+1] == '"' {
+			name.WriteByte('"')
+			i++
+			continue
+		}
+		if i != len(expression)-1 || name.Len() == 0 {
+			return "", false
+		}
+		return name.String(), true
+	}
+	return "", false
+}
+
+func isUnquotedIdentifier(expression string) bool {
+	for i, r := range expression {
+		if i == 0 && !isIdentifierStart(r) {
+			return false
+		}
+		if i > 0 && !isIdentifierContinue(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isIdentifierStart(r rune) bool {
+	return r == '_' || isASCIILetter(r)
+}
+
+func isIdentifierContinue(r rune) bool {
+	return isIdentifierStart(r) || r == '$' || isASCIIDigit(r)
+}
+
+func isASCIILetter(r rune) bool {
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z')
+}
+
+func isASCIIDigit(r rune) bool {
+	return r >= '0' && r <= '9'
 }
 
 func stringArgsCode(items []string) string {

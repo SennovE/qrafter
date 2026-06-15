@@ -5,7 +5,8 @@ import (
 	"fmt"
 )
 
-func RevisionCommandOptionsFromArgs(args []string) (string, RevisionCommandOptions, error) {
+// RevisionCommandOptionsFromArgs parses command-line flags for revision command generation.
+func RevisionCommandOptionsFromArgs(args []string) (string, *RevisionCommandOptions, error) {
 	fs := flag.NewFlagSet("revision-command", flag.ContinueOnError)
 
 	var path string
@@ -54,28 +55,28 @@ func RevisionCommandOptionsFromArgs(args []string) (string, RevisionCommandOptio
 	)
 
 	if err := fs.Parse(args); err != nil {
-		return "", RevisionCommandOptions{}, err
+		return "", nil, err
 	}
 
 	if path == "" {
-		return "", RevisionCommandOptions{}, fmt.Errorf("missing required flag: --path")
+		return "", nil, fmt.Errorf("missing required flag: --path")
 	}
 
 	if options.Dialect == "" {
-		return "", RevisionCommandOptions{}, fmt.Errorf("missing required flag: --dialect")
+		return "", nil, fmt.Errorf("missing required flag: --dialect")
 	}
 
 	if options.DriverName == "" {
-		return "", RevisionCommandOptions{}, fmt.Errorf("missing required flag: --driver")
+		return "", nil, fmt.Errorf("missing required flag: --driver")
 	}
 
 	if options.DriverImportPath == "" {
-		return "", RevisionCommandOptions{}, fmt.Errorf("missing required flag: --driver-import")
+		return "", nil, fmt.Errorf("missing required flag: --driver-import")
 	}
 
 	if options.DatabaseDSN == "" {
-		return "", RevisionCommandOptions{}, fmt.Errorf("missing required flag: --dsn")
+		return "", nil, fmt.Errorf("missing required flag: --dsn")
 	}
 
-	return path, options, nil
+	return path, &options, nil
 }

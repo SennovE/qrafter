@@ -57,10 +57,11 @@ func desiredSchema(d dialect.Renderer) qmig.Schema {
 
 `
 
+// RevisionCommandOptions configures generated revision command source code.
 type RevisionCommandOptions struct {
 	DriverImportPath   string
 	DriverName         string
-	Dialect 		   string
+	Dialect            string
 	MigrationDirectory string
 	DatabaseDSN        string
 }
@@ -75,7 +76,7 @@ type revisionCommandTemplateData struct {
 }
 
 // WriteRevisionCommandFile generates a revision command file at path.
-func WriteRevisionCommandFile(path string, options RevisionCommandOptions) error {
+func WriteRevisionCommandFile(path string, options *RevisionCommandOptions) error {
 	if strings.TrimSpace(path) == "" {
 		return fmt.Errorf("migrations: revision command path is required")
 	}
@@ -83,9 +84,10 @@ func WriteRevisionCommandFile(path string, options RevisionCommandOptions) error
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("create revision command directory: %w", err)
 	}
+	// #nosec G304 -- path is a caller-provided destination for generated Go source.
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, defaultMigrationFileMode)
 	if err != nil {
 		return fmt.Errorf("create revision command file: %w", err)
@@ -97,20 +99,20 @@ func WriteRevisionCommandFile(path string, options RevisionCommandOptions) error
 	return nil
 }
 
-func generateRevisionCommandCode(options RevisionCommandOptions) ([]byte, error) {
+func generateRevisionCommandCode(options *RevisionCommandOptions) ([]byte, error) {
 	dialectRenderer, databaseIntrospector := dialectOptions(options.Dialect)
 	data := revisionCommandTemplateData{
-		DriverImportPath: options.DriverImportPath,
-		DriverName: options.DriverName,
-		MigrationDirectory: options.MigrationDirectory,
-		DatabaseDSN: options.DatabaseDSN,
-		DialectRenderer: dialectRenderer,
+		DriverImportPath:     options.DriverImportPath,
+		DriverName:           options.DriverName,
+		MigrationDirectory:   options.MigrationDirectory,
+		DatabaseDSN:          options.DatabaseDSN,
+		DialectRenderer:      dialectRenderer,
 		DatabaseIntrospector: databaseIntrospector,
 	}
 	return renderGoTemplate("revision command", revisionCommandTemplate, data)
 }
 
-func dialectOptions(d string) (string, string) {
+func dialectOptions(d string) (renderer, introspector string) {
 	d = strings.ToLower(d)
 	switch d {
 	case "postgres", "pg", "postgresql", "pgx":

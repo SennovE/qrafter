@@ -21,6 +21,8 @@ const (
 	UserStatusPending UserStatus = "pending"
 )
 
+const personTableName = "users"
+
 // Person is a schema-rich test table model.
 type Person struct {
 	q.Table `table:"users"`
@@ -54,7 +56,7 @@ type Person struct {
 // TableConfig returns explicit schema metadata for Person.
 func (p Person) TableConfig() q.TableConfig { //nolint:gocritic // q.NewTable currently binds value table models.
 	return q.TableConfig{
-		Name:   "users",
+		Name:   personTableName,
 		Schema: "public",
 
 		Columns: q.ColumnsConfig{
