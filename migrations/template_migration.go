@@ -74,13 +74,13 @@ func MakeMigration(ctx context.Context, comment, outDir string, config *Migratio
 		return "", err
 	}
 
-	filename, revision := migrationFileName(comment)
+	filename, revisionVersion := migrationFileName(comment)
 	diff, err := getSchemaDiff(ctx, config)
 	if err != nil {
 		return "", err
 	}
 
-	code, err := generateMigrationFileText(*diff, revision)
+	code, err := generateMigrationFileText(*diff, revisionVersion)
 	if err != nil {
 		return "", err
 	}
@@ -90,6 +90,10 @@ func MakeMigration(ctx context.Context, comment, outDir string, config *Migratio
 	}
 	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return "", fmt.Errorf("create migration directory: %w", err)
+	}
+
+	if err := createRegistryFile(outDir); err != nil {
+		return "", fmt.Errorf("create registry file: %w", err)
 	}
 
 	path := filepath.Join(outDir, filename)
@@ -102,6 +106,10 @@ func MakeMigration(ctx context.Context, comment, outDir string, config *Migratio
 	defer func() { _ = file.Close() }()
 	if _, err := file.Write(code); err != nil {
 		return "", fmt.Errorf("write migration file: %w", err)
+	}
+
+	if err := appendMigrationToRegistry(outDir, revisionVersion); err != nil {
+		return "", err
 	}
 	return path, nil
 }

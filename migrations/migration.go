@@ -2,37 +2,11 @@ package migrations
 
 import "github.com/SennovE/qrafter/ddl"
 
-// Migration stores DDL statements for applying and reverting a schema diff.
-type Migration struct {
-	Up   ddl.Statements
-	Down ddl.Statements
-}
-
-// DDL converts the schema diff into forward and backward DDL statements.
-func (d SchemaDiff) DDL() Migration {
-	return migrationFromSteps(migrationSteps(d))
-}
-
 type migrationStep struct {
 	up       ddl.Renderer
 	down     ddl.Renderer
 	upCode   string
 	downCode string
-}
-
-func migrationFromSteps(steps []migrationStep) Migration {
-	migration := Migration{}
-	for i := range steps {
-		if steps[i].up != nil {
-			migration.Up = append(migration.Up, steps[i].up)
-		}
-	}
-	for i := len(steps) - 1; i >= 0; i-- {
-		if steps[i].down != nil {
-			migration.Down = append(migration.Down, steps[i].down)
-		}
-	}
-	return migration
 }
 
 func migrationSteps(diff SchemaDiff) []migrationStep {

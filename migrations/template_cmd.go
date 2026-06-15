@@ -22,7 +22,7 @@ import (
 
 var (
 	dsn string = "{{.DatabaseDSN}}"
-	outDir string = "{{.MigrationDirectory}}"
+	migrationDirectory string = "{{.MigrationDirectory}}"
 	renderer dialect.Renderer = {{.DialectRenderer}}
 	databaseIntrospector qmig.Introspector = {{.DatabaseIntrospector}}
 	driverName string = "{{.DriverName}}"
@@ -35,7 +35,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	path, err := qmig.MakeMigration(ctx, *comment, outDir, &qmig.MigrationToolConfig{
+	path, err := qmig.MakeMigration(ctx, *comment, migrationDirectory, &qmig.MigrationToolConfig{
 		DriverName:     driverName,
 		DataSourceName: dsn,
 		Introspector:   databaseIntrospector,
