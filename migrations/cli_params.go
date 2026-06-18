@@ -5,12 +5,11 @@ import (
 	"fmt"
 )
 
-// RevisionCommandOptionsFromArgs parses command-line flags for revision command generation.
-func RevisionCommandOptionsFromArgs(args []string) (string, *RevisionCommandOptions, error) {
+func revisionCommandOptionsFromArgs(args []string) (string, *configOptions, error) {
 	fs := flag.NewFlagSet("revision-command", flag.ContinueOnError)
 
 	var path string
-	var options RevisionCommandOptions
+	var options configOptions
 
 	fs.StringVar(
 		&path,
@@ -38,13 +37,6 @@ func RevisionCommandOptionsFromArgs(args []string) (string, *RevisionCommandOpti
 		"dialect",
 		"",
 		"database dialect, for example postgres, mysql, sqlite",
-	)
-
-	fs.StringVar(
-		&options.MigrationDirectory,
-		"dir",
-		"./migrations",
-		"directory for generated migration files",
 	)
 
 	fs.StringVar(

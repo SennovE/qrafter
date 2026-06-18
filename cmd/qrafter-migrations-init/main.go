@@ -8,12 +8,7 @@ import (
 )
 
 func main() {
-	path, options, err := qmig.RevisionCommandOptionsFromArgs(os.Args[1:])
-	if err != nil {
-		panic(err)
-	}
-	err = qmig.WriteRevisionCommandFile(path, options)
-	if err != nil {
+	if err := qmig.GenerateMigrationsConfig(os.Args[1:]); err != nil {
 		panic(err)
 	}
 }

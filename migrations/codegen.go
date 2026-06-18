@@ -36,15 +36,6 @@ var simpleDDLTypeCodes = []struct {
 	{"Double", ddl.Double()},
 }
 
-func generateMigrationFileText(diff SchemaDiff, migrationNumber string) ([]byte, error) {
-	steps := migrationSteps(diff)
-	return renderMigrationCodeTemplate(migrationTemplateData{
-		MigrationNumber: migrationNumber,
-		UpStatements:    upStepCodes(steps),
-		DownStatements:  downStepCodes(steps),
-	})
-}
-
 func upStepCodes(steps []migrationStep) []string {
 	codes := make([]string, 0, len(steps))
 	for i := range steps {

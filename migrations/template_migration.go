@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go/format"
-	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -15,8 +13,6 @@ import (
 )
 
 const (
-	defaultMigrationName      = "migration"
-	defaultMigrationFileMode  = 0o644
 	defaultRevisionTimeLayout = "20060102150405"
 )
 
@@ -59,7 +55,7 @@ type MigrationToolConfig struct {
 
 	Introspector Introspector
 	Dialect      dialect.Renderer
-	Desired      Schema
+	Desired      func(dialect.Renderer) Schema
 }
 
 type migrationTemplateData struct {
@@ -88,24 +84,10 @@ func MakeMigration(ctx context.Context, comment, outDir string, config *Migratio
 	if outDir == "" {
 		outDir = "."
 	}
-	if err := os.MkdirAll(outDir, 0o750); err != nil {
-		return "", fmt.Errorf("create migration directory: %w", err)
-	}
-
-	if err := createRegistryFile(outDir); err != nil {
-		return "", fmt.Errorf("create registry file: %w", err)
-	}
 
 	path := filepath.Join(outDir, filename)
-
-	// #nosec G304 -- path is generated inside the caller-provided migration output directory.
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, defaultMigrationFileMode)
-	if err != nil {
+	if err := createFile(path, code); err != nil {
 		return "", fmt.Errorf("create migration file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-	if _, err := file.Write(code); err != nil {
-		return "", fmt.Errorf("write migration file: %w", err)
 	}
 
 	if err := appendMigrationToRegistry(outDir, revisionVersion); err != nil {
@@ -140,7 +122,7 @@ func revision() string {
 func migrationFileName(comment string) (filename, migrationNumber string) {
 	revision := revision()
 	if comment == "" {
-		comment = defaultMigrationName
+		comment = "migration"
 	} else {
 		comment = strings.ReplaceAll(comment, " ", "_")
 	}
@@ -157,14 +139,14 @@ func renderGoTemplate(name, source string, data any) ([]byte, error) {
 	if err := t.Execute(&b, data); err != nil {
 		return nil, fmt.Errorf("execute %s template: %w", name, err)
 	}
-
-	src, err := format.Source(b.Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("format %s template: %w", name, err)
-	}
-	return src, nil
+	return b.Bytes(), nil
 }
 
-func renderMigrationCodeTemplate(data migrationTemplateData) ([]byte, error) {
-	return renderGoTemplate("migration", migrationTemplate, data)
+func generateMigrationFileText(diff SchemaDiff, migrationNumber string) ([]byte, error) {
+	steps := migrationSteps(diff)
+	return renderGoTemplate("migration", migrationTemplate, migrationTemplateData{
+		MigrationNumber: migrationNumber,
+		UpStatements:    upStepCodes(steps),
+		DownStatements:  downStepCodes(steps),
+	})
 }

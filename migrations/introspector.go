@@ -29,7 +29,7 @@ func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*SchemaDif
 		return nil, err
 	}
 
-	desired := cloneNormalizedSchema(config.Desired)
+	desired := cloneNormalizedSchema(config.Desired(config.Dialect))
 	diff := DiffSchemas(current, desired)
 	return &diff, nil
 }
