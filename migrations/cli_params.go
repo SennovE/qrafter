@@ -3,19 +3,26 @@ package migrations
 import (
 	"flag"
 	"fmt"
+	"time"
 )
 
-func revisionCommandOptionsFromArgs(args []string) (string, *configOptions, error) {
-	fs := flag.NewFlagSet("revision-command", flag.ContinueOnError)
+const (
+	defaultMigrationDirectory = "./migrations"
+	defaultMigrationComment   = "migration"
+	defaultRevisionTimeout    = 30 * time.Second
+)
+
+func configOptionsFromArgs(args []string) (string, *configOptions, error) {
+	fs := flag.NewFlagSet("migrations-init", flag.ContinueOnError)
 
 	var path string
 	var options configOptions
 
 	fs.StringVar(
 		&path,
-		"path",
-		"",
-		"Path for generated cmd file",
+		"dir",
+		defaultMigrationDirectory,
+		"directory for generated qrafter config file",
 	)
 
 	fs.StringVar(
@@ -71,4 +78,86 @@ func revisionCommandOptionsFromArgs(args []string) (string, *configOptions, erro
 	}
 
 	return path, &options, nil
+}
+
+type revisionOptions struct {
+	WorkDir          string
+	MigrationDir     string
+	ConfigImportPath string
+	Comment          string
+	GoBinary         string
+	Timeout          time.Duration
+}
+
+func revisionOptionsFromArgs(args []string) (*revisionOptions, error) {
+	fs := flag.NewFlagSet("migrations-revision", flag.ContinueOnError)
+
+	options := revisionOptions{
+		WorkDir:      ".",
+		MigrationDir: defaultMigrationDirectory,
+		Comment:      defaultMigrationComment,
+		GoBinary:     "go",
+		Timeout:      defaultRevisionTimeout,
+	}
+
+	fs.StringVar(
+		&options.WorkDir,
+		"workdir",
+		options.WorkDir,
+		"project directory containing go.mod",
+	)
+
+	fs.StringVar(
+		&options.MigrationDir,
+		"dir",
+		options.MigrationDir,
+		"directory containing qrafter_config.go and generated migrations",
+	)
+
+	fs.StringVar(
+		&options.ConfigImportPath,
+		"config-import",
+		"",
+		"Go import path for package containing MigrationConfig",
+	)
+
+	fs.StringVar(
+		&options.Comment,
+		"comment",
+		options.Comment,
+		"migration comment",
+	)
+
+	fs.StringVar(
+		&options.GoBinary,
+		"go",
+		options.GoBinary,
+		"go binary used for the temporary build",
+	)
+
+	fs.DurationVar(
+		&options.Timeout,
+		"timeout",
+		options.Timeout,
+		"timeout for the temporary build and schema diff",
+	)
+
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
+
+	if options.WorkDir == "" {
+		return nil, fmt.Errorf("missing required flag: --workdir")
+	}
+	if options.MigrationDir == "" {
+		return nil, fmt.Errorf("missing required flag: --dir")
+	}
+	if options.GoBinary == "" {
+		return nil, fmt.Errorf("missing required flag: --go")
+	}
+	if options.Timeout <= 0 {
+		return nil, fmt.Errorf("timeout must be positive")
+	}
+
+	return &options, nil
 }

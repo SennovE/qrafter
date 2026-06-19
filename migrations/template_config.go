@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-
 const configFilename = "qrafter_config.go"
 
 const configTemplate = `package migrations
@@ -17,6 +16,7 @@ import (
 	_ "{{.DriverImportPath}}"
 )
 
+// MigrationConfig configures qrafter migration generation for this project.
 var MigrationConfig = qmig.MigrationToolConfig{
 	DriverName:     "{{.DriverName}}",
 	DataSourceName: "{{.DatabaseDSN}}",
@@ -25,6 +25,7 @@ var MigrationConfig = qmig.MigrationToolConfig{
 	Desired:        desiredSchema,
 }
 
+// Registry stores generated migrations in version order.
 var Registry = []qmig.Migration{
 }
 
@@ -37,10 +38,10 @@ func desiredSchema(d dialect.Renderer) qmig.Schema {
 `
 
 type configOptions struct {
-	DriverImportPath   string
-	DriverName         string
-	Dialect            string
-	DatabaseDSN        string
+	DriverImportPath string
+	DriverName       string
+	Dialect          string
+	DatabaseDSN      string
 }
 
 type configTemplateData struct {
@@ -51,8 +52,8 @@ type configTemplateData struct {
 	DatabaseIntrospector string
 }
 
-func GenerateMigrationsConfig(args []string) error {
-	path, options, err := revisionCommandOptionsFromArgs(args)
+func generateMigrationsConfig(args []string) error {
+	path, options, err := configOptionsFromArgs(args)
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func writeConfigFile(path string, options *configOptions) error {
 	}
 	filePath := filepath.Join(path, configFilename)
 	if err := createFile(filePath, code); err != nil {
-		return fmt.Errorf("create revision command file: %w", err)
+		return fmt.Errorf("create migrations config file: %w", err)
 	}
 	return nil
 }
@@ -83,7 +84,7 @@ func generateConfigCode(options *configOptions) ([]byte, error) {
 		DialectRenderer:      dialectRenderer,
 		DatabaseIntrospector: databaseIntrospector,
 	}
-	return renderGoTemplate("revision command", configTemplate, data)
+	return renderGoTemplate("migrations config", configTemplate, data)
 }
 
 func dialectOptions(d string) (renderer, introspector string) {

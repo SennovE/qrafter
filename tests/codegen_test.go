@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/SennovE/qrafter/ddl"
+	"github.com/SennovE/qrafter/dialect"
 	qmig "github.com/SennovE/qrafter/migrations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,6 +36,14 @@ func (i codegenIntrospector) ReadSchema(context.Context, qmig.Database) (qmig.Sc
 
 func TestMakeMigrationWritesCompleteGeneratedFile(t *testing.T) {
 	outDir := t.TempDir()
+	require.NoError(t, qmig.GenerateMigrationsConfig([]string{
+		"--path", outDir,
+		"--driver-import", "github.com/lib/pq",
+		"--driver", "postgres",
+		"--dialect", "postgres",
+		"--dsn", "postgres://app_user:app_password@localhost:5432/app_db?sslmode=disable",
+	}))
+
 	path, err := qmig.MakeMigration(
 		context.Background(),
 		"test generation",
@@ -42,21 +51,23 @@ func TestMakeMigrationWritesCompleteGeneratedFile(t *testing.T) {
 		&qmig.MigrationToolConfig{
 			DB:           codegenDB{},
 			Introspector: codegenIntrospector{},
-			Desired: qmig.Schema{Tables: []qmig.Table{{
-				Name: "users",
-				Columns: []qmig.Column{
-					{Name: "id", Type: ddl.UUID(), NotNull: true, HasDefault: true, DefaultExpr: "uuid_generate_v4()"},
-					{Name: "email", Type: ddl.Text(), NotNull: true},
-				},
-				Constraints: []qmig.Constraint{
-					{Name: "users_pkey", Kind: qmig.ConstraintPrimaryKey, Columns: []string{"id"}},
-				},
-				Indexes: []qmig.Index{{
-					Name:      "idx_users_email",
-					TableName: "users",
-					Keys:      []qmig.IndexKey{{Expression: `"email"`}},
-				}},
-			}}},
+			Desired: func(_ dialect.Renderer) qmig.Schema {
+				return qmig.Schema{Tables: []qmig.Table{{
+					Name: "users",
+					Columns: []qmig.Column{
+						{Name: "id", Type: ddl.UUID(), NotNull: true, HasDefault: true, DefaultExpr: "uuid_generate_v4()"},
+						{Name: "email", Type: ddl.Text(), NotNull: true},
+					},
+					Constraints: []qmig.Constraint{
+						{Name: "users_pkey", Kind: qmig.ConstraintPrimaryKey, Columns: []string{"id"}},
+					},
+					Indexes: []qmig.Index{{
+						Name:      "idx_users_email",
+						TableName: "users",
+						Keys:      []qmig.IndexKey{{Expression: `"email"`}},
+					}},
+				}}}
+			},
 		},
 	)
 	require.NoError(t, err)

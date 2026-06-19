@@ -103,6 +103,9 @@ func validateMigrationToolConfig(config *MigrationToolConfig) error {
 	if config.Introspector == nil {
 		return fmt.Errorf("migrations: introspector is nil")
 	}
+	if config.Desired == nil {
+		return fmt.Errorf("migrations: desired schema function is nil")
+	}
 	if config.DB != nil {
 		return nil
 	}

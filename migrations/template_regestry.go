@@ -17,12 +17,16 @@ type Migration struct {
 	Down    func() ddl.Statements
 }
 
-const migrationElem = `	{
-		Version: "%s",
-		Up:      Up%s,
-		Down:    Down%s,
-	},
+const migrationElem = `    qmig.New("%s", Up%s, Down%s),
 `
+
+func New(version string, up, down func() ddl.Statements) Migration {
+	return Migration{
+		Version: version,
+		Up: up,
+		Down: down,
+	}
+}
 
 func appendMigrationToRegistry(registryPath, version string) error {
 	path := filepath.Join(registryPath, configFilename)
