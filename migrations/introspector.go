@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // Database is implemented by *sql.DB, *sql.Tx, and *sql.Conn.
@@ -29,7 +30,10 @@ func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*SchemaDif
 		return nil, err
 	}
 
+	versionTable := migrationVersionTable(config.VersionTable)
+	current = withoutMigrationVersionTable(current, versionTable)
 	desired := cloneNormalizedSchema(config.Desired(config.Dialect))
+	desired = withoutMigrationVersionTable(desired, versionTable)
 	diff := DiffSchemas(current, desired)
 	return &diff, nil
 }
@@ -61,4 +65,20 @@ func migrationDatabase(ctx context.Context, config *MigrationToolConfig) (Databa
 
 func noopClose() error {
 	return nil
+}
+
+func withoutMigrationVersionTable(schema Schema, versionTable string) Schema {
+	if versionTable == "" {
+		return schema
+	}
+
+	tables := schema.Tables[:0]
+	for i := range schema.Tables {
+		if strings.EqualFold(schema.Tables[i].Name, versionTable) {
+			continue
+		}
+		tables = append(tables, schema.Tables[i])
+	}
+	schema.Tables = tables
+	return schema
 }

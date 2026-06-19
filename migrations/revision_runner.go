@@ -80,8 +80,18 @@ func runMigrationRevision(ctx context.Context, options *revisionOptions) error {
 		return err
 	}
 
-	tmpRoot := filepath.Join(resolved.WorkDir, ".qrafter", "tmp")
-	if err := os.MkdirAll(tmpRoot, 0o755); err != nil {
+	return runTemporaryMigrationBuild(ctx, resolved.WorkDir, resolved.GoBinary, "revision-", code)
+}
+
+func runTemporaryMigrationBuild(
+	ctx context.Context,
+	workDir string,
+	goBinary string,
+	prefix string,
+	code []byte,
+) error {
+	tmpRoot := filepath.Join(workDir, ".qrafter", "tmp")
+	if err := os.MkdirAll(tmpRoot, 0o750); err != nil {
 		return fmt.Errorf("create temporary migration root: %w", err)
 	}
 	defer func() {
@@ -89,7 +99,7 @@ func runMigrationRevision(ctx context.Context, options *revisionOptions) error {
 		_ = os.Remove(filepath.Dir(tmpRoot))
 	}()
 
-	tempDir, err := os.MkdirTemp(tmpRoot, "revision-")
+	tempDir, err := os.MkdirTemp(tmpRoot, prefix)
 	if err != nil {
 		return fmt.Errorf("create temporary migration build directory: %w", err)
 	}
@@ -99,7 +109,7 @@ func runMigrationRevision(ctx context.Context, options *revisionOptions) error {
 		return fmt.Errorf("create temporary migration build file: %w", err)
 	}
 
-	return runTemporaryRevisionBuild(ctx, resolved, tempDir)
+	return runTemporaryBuildPackage(ctx, workDir, goBinary, tempDir)
 }
 
 func resolveRevisionOptions(
@@ -209,20 +219,21 @@ func generateRevisionRunnerCode(options *resolvedRevisionOptions) ([]byte, error
 	return renderGoTemplate("migration revision runner", revisionRunnerTemplate, data)
 }
 
-func runTemporaryRevisionBuild(
+func runTemporaryBuildPackage(
 	ctx context.Context,
-	options *resolvedRevisionOptions,
+	workDir string,
+	goBinary string,
 	tempDir string,
 ) error {
-	rel, err := filepath.Rel(options.WorkDir, tempDir)
+	rel, err := filepath.Rel(workDir, tempDir)
 	if err != nil {
 		return fmt.Errorf("resolve temporary build package: %w", err)
 	}
 
 	pkg := "./" + filepath.ToSlash(rel)
 	// #nosec G204 -- goBinary is an explicit CLI option for selecting the Go tool.
-	cmd := exec.CommandContext(ctx, options.GoBinary, "run", pkg)
-	cmd.Dir = options.WorkDir
+	cmd := exec.CommandContext(ctx, goBinary, "run", pkg)
+	cmd.Dir = workDir
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

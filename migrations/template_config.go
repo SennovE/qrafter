@@ -23,6 +23,7 @@ var MigrationConfig = qmig.MigrationToolConfig{
 	Introspector:   {{.DatabaseIntrospector}},
 	Dialect:        {{.DialectRenderer}},
 	Desired:        desiredSchema,
+	VersionTable:   qmig.DefaultMigrationVersionTable,
 }
 
 // Registry stores generated migrations in version order.
@@ -50,6 +51,11 @@ type configTemplateData struct {
 	DatabaseDSN          string
 	DialectRenderer      string
 	DatabaseIntrospector string
+}
+
+// GenerateMigrationsConfig creates the user-editable qrafter migration config.
+func GenerateMigrationsConfig(args []string) error {
+	return generateMigrationsConfig(args)
 }
 
 func generateMigrationsConfig(args []string) error {

@@ -20,11 +20,12 @@ type Migration struct {
 const migrationElem = `    qmig.New("%s", Up%s, Down%s),
 `
 
+// New creates a migration registry entry.
 func New(version string, up, down func() ddl.Statements) Migration {
 	return Migration{
 		Version: version,
-		Up: up,
-		Down: down,
+		Up:      up,
+		Down:    down,
 	}
 }
 

@@ -37,7 +37,7 @@ func (i codegenIntrospector) ReadSchema(context.Context, qmig.Database) (qmig.Sc
 func TestMakeMigrationWritesCompleteGeneratedFile(t *testing.T) {
 	outDir := t.TempDir()
 	require.NoError(t, qmig.GenerateMigrationsConfig([]string{
-		"--path", outDir,
+		"--dir", outDir,
 		"--driver-import", "github.com/lib/pq",
 		"--driver", "postgres",
 		"--dialect", "postgres",
@@ -49,8 +49,17 @@ func TestMakeMigrationWritesCompleteGeneratedFile(t *testing.T) {
 		"test generation",
 		outDir,
 		&qmig.MigrationToolConfig{
-			DB:           codegenDB{},
-			Introspector: codegenIntrospector{},
+			DB: codegenDB{},
+			Introspector: codegenIntrospector{schema: qmig.Schema{Tables: []qmig.Table{{
+				Name: "qrafter_schema_version",
+				Columns: []qmig.Column{
+					{Name: "id", Type: ddl.Integer(), NotNull: true},
+					{Name: "version", Type: ddl.VarChar(255), NotNull: true, HasDefault: true, DefaultExpr: "''::character varying"},
+				},
+				Constraints: []qmig.Constraint{
+					{Name: "pk_qrafter_schema_version_id", Kind: qmig.ConstraintPrimaryKey, Columns: []string{"id"}},
+				},
+			}}}},
 			Desired: func(_ dialect.Renderer) qmig.Schema {
 				return qmig.Schema{Tables: []qmig.Table{{
 					Name: "users",

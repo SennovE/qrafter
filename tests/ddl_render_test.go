@@ -39,6 +39,25 @@ func TestDDLCreateTablePostgreSQL(t *testing.T) {
 )`, sql)
 }
 
+func TestDDLRawSQLRendersVerbatimStatement(t *testing.T) {
+	sql, err := ddl.RawSQL("CREATE EXTENSION IF NOT EXISTS pgcrypto;").Render(dialect.PostgreSQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, "CREATE EXTENSION IF NOT EXISTS pgcrypto;", sql)
+}
+
+func TestDDLStatementsDoesNotDoubleTerminateRawSQL(t *testing.T) {
+	sql, err := ddl.Statements{
+		ddl.RawSQL("CREATE EXTENSION IF NOT EXISTS pgcrypto;"),
+		ddl.CreateTable("users").Columns(
+			ddl.Column("id", ddl.UUID()).NotNull(),
+		),
+	}.Render(dialect.PostgreSQL{})
+
+	require.NoError(t, err)
+	assert.Equal(t, "CREATE EXTENSION IF NOT EXISTS pgcrypto;\nCREATE TABLE \"users\" (\n    \"id\" UUID NOT NULL\n);\n", sql)
+}
+
 func TestDDLColumnUsesExplicitType(t *testing.T) {
 	sql, err := ddl.CreateTable("manual_users").
 		Columns(

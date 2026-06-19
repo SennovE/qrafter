@@ -201,9 +201,18 @@ func (c *compiler) compileStatements(statements Statements) {
 		before := c.w.Len()
 		c.Compile(stmt)
 		if c.w.Len() > before {
-			c.Write(";\n")
+			c.writeStatementSeparator(before)
 		}
 	}
+}
+
+func (c *compiler) writeStatementSeparator(statementStart int) {
+	statement := strings.TrimSpace(c.w.String()[statementStart:])
+	if strings.HasSuffix(statement, ";") {
+		c.Write("\n")
+		return
+	}
+	c.Write(";\n")
 }
 
 func (c *compiler) compileCreateTable(s CreateTableStmt) {

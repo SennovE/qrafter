@@ -56,6 +56,7 @@ type MigrationToolConfig struct {
 	Introspector Introspector
 	Dialect      dialect.Renderer
 	Desired      func(dialect.Renderer) Schema
+	VersionTable string
 }
 
 type migrationTemplateData struct {

@@ -5,7 +5,7 @@ import "fmt"
 // RunMigrationsCommand dispatches qrafter migration CLI subcommands.
 func RunMigrationsCommand(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: qrafter-migrations <init|revision> [flags]")
+		return fmt.Errorf("usage: qrafter-migrations <init|revision|up|down> [flags]")
 	}
 
 	switch args[0] {
@@ -13,6 +13,10 @@ func RunMigrationsCommand(args []string) error {
 		return generateMigrationsConfig(args[1:])
 	case "revision":
 		return generateMigrationRevision(args[1:])
+	case "up":
+		return applyMigrationsCommand(DirectionUp, args[1:])
+	case "down":
+		return applyMigrationsCommand(DirectionDown, args[1:])
 	default:
 		return fmt.Errorf("unknown migrations command %q", args[0])
 	}
