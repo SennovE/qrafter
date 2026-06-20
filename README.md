@@ -4,25 +4,12 @@
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/SennovE/qrafter)](https://goreportcard.com/report/github.com/SennovE/qrafter)
 
-**qrafter is a fluent, type-safe SQL query builder for Go — no ORM, no codegen, just typed SQL-shaped Go.**
+qrafter is a fluent, type-safe SQL toolkit for Go. It gives you typed query
+composition, DDL builders, schema introspection, and generated Go migrations
+without becoming an ORM.
 
-qrafter helps you build parameterized SQL from typed Go table structs.
-You define tables once, compose queries from typed columns, and render SQL plus
-driver arguments for `database/sql`, `sqlx`, and similar packages.
-
-It is designed for Go developers who want a Go-style way to build explicit SQL: keep queries readable and under control, while avoiding fragile hand-written column names, placeholders, and query fragments.
-
-## Why qrafter?
-
-Use qrafter when you want:
-
-- Typed table and column references with `qrafter.Column[T]`
-- SQL that still looks and feels like SQL
-- Parameterized queries instead of interpolated user values
-- Dialect-aware identifier quoting and placeholders
-- Compatibility with your existing database driver and connection pool
-- A lightweight query builder instead of a full ORM
-- No code generation step in your build workflow
+Use qrafter when you want explicit SQL, typed table/column references,
+database/sql compatibility, and migration files you can read and edit.
 
 ## Install
 
@@ -81,80 +68,90 @@ LIMIT 10
 [18 Alice]
 ```
 
-## Larger examples
+## Migrations
 
-More application-shaped examples live in [examples](examples):
+The migration tool lives in `cmd/qrafter-migrations`. It creates a Go config
+file, compares the configured schema with the live database, generates Go
+migration files, registers them, and applies or reverts them.
 
-* [database_sql](examples/database_sql) shows repository-style code with
-  `database/sql`, context-aware execution, and typed query rendering.
-* [reporting](examples/reporting) builds a larger analytical query with joins,
-  grouping, a CTE, and a window function.
-* [schema](examples/schema) renders DDL for tables, constraints, indexes, and
-  table alterations.
+Show CLI help:
 
-## How it works
+```sh
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest help
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest help revision
+```
 
-A qrafter table is a Go struct with typed column fields:
+Create `./migrations/qrafter_config.go`:
+
+```sh
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest init \
+  --dir ./migrations \
+  --driver-import github.com/lib/pq \
+  --driver postgres \
+  --dialect postgres \
+  --dsn "postgres://app_user:app_password@localhost:5432/app_db?sslmode=disable"
+```
+
+The generated config is regular Go code. Add your table configs to
+`desiredSchema`:
 
 ```go
-type User struct {
-	q.Table `table:"users"`
+package migrations
 
-	ID       q.Column[int] `db:"id"`
-	UserName q.Column[string]
-	Age      q.Column[int]
+import (
+	"github.com/SennovE/qrafter/dialect"
+	qmig "github.com/SennovE/qrafter/migrations"
+	_ "github.com/lib/pq"
+)
+
+var MigrationConfig = qmig.MigrationToolConfig{
+	DriverName:     "postgres",
+	DataSourceName: "postgres://app_user:app_password@localhost:5432/app_db?sslmode=disable",
+	Introspector:   qmig.NewPostgreSQL(qmig.WithSchemas("public")),
+	Dialect:        dialect.PostgreSQL{},
+	Desired:        desiredSchema,
+	VersionTable:   qmig.DefaultMigrationVersionTable,
+}
+
+var Registry = []qmig.Migration{
+}
+
+func desiredSchema(d dialect.Renderer) qmig.Schema {
+	var schema qmig.Schema
+	qmig.RegisterTable[User](&schema, d) // Add your tables
+	return schema
 }
 ```
 
-`q.MustNewTable[User]()` binds the struct fields to SQL table and column names.
-Queries are then composed from those typed columns and rendered for a selected
-SQL dialect.
+Generate a migration from the live database diff:
 
-Field names are converted into column names automatically, or you can override
-them with `db` tags.
+```sh
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest revision \
+  --dir ./migrations \
+  --comment create_users
+```
 
-## When to use it
+This creates a timestamped Go file and appends it to `Registry` in
+`qrafter_config.go`. Generated migrations return `ddl.Statements`, so you can
+edit them and add custom statements such as `qddl.RawSQL("CREATE EXTENSION ...")`
+when needed.
 
-qrafter is useful when you want typed query composition while still keeping
-control over the generated SQL.
+Apply or revert registered migrations:
 
-Good fits:
+```sh
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest up --dir ./migrations --to head
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations@latest down --dir ./migrations --to base
+```
 
-* services that already use `database/sql` or `sqlx`
-* projects that prefer explicit SQL over ORM abstractions
-* codebases where query fragments need to be composed safely
-* applications that want typed table and column references without codegen
+The apply command stores the current version in
+`qrafter_schema_version` by default. Override it in config with
+`VersionTable` or from CLI with `--version-table`.
 
-Less ideal fits:
+You can test this yourself with [examples/migrations](examples/migrations).
 
-* projects that want a full ORM
-* applications that expect automatic relationship loading
-* teams that prefer writing raw SQL files and generating Go code from them
-* projects that need schema migrations as part of the same tool
+## DDL Builders
 
-## Features
-
-* Typed table structs with `qrafter.Column[T]`
-* Table configuration via embedded `qrafter.Table` or `TableConfig()`
-* Automatic column binding from field names or `db` tags
-* Custom field-to-column mapping through `qrafter.NameMapper`
-* Dialect-aware identifier quoting and placeholders
-* Human-readable multiline SQL rendering
-* Parameterized `SELECT`, joins, grouping, ordering, limits, and offsets
-* Parameterized `INSERT` with `VALUES`, `DEFAULT VALUES`, `INSERT ... SELECT`, and `RETURNING`
-* Parameterized `UPDATE` with `SET`, `FROM`, `WHERE`, CTEs, and `RETURNING`
-* Parameterized `DELETE` with `WHERE`, `USING`, CTEs, and `RETURNING`
-* CTEs and recursive CTEs
-* Compound queries such as `UNION` and `UNION ALL`
-* Aggregates and window functions
-* DDL builders for tables, columns, constraints, and indexes
-* Centralized SQL compiler with dialect override hooks for database-specific syntax
-* `database/sql` and `sqlx`-friendly scanning helpers
-
-## DDL
-
-Schema statements live in the separate `ddl` package so the root package can
-stay focused on query building:
+Schema statements live in the `ddl` package:
 
 ```go
 sql, err := ddl.CreateTable("users").
@@ -166,87 +163,39 @@ sql, err := ddl.CreateTable("users").
 	Render(dialect.PostgreSQL{})
 ```
 
-DDL rendering returns an error when a dialect cannot safely render a requested
-feature, such as SQLite column type changes or MySQL partial indexes.
-
-Constraints and indexes are built explicitly from table and column names:
-
-```go
-sql, err := ddl.Statements{
-	ddl.CreateTable("users").
-		Columns(
-			ddl.Column("id", ddl.BigSerial()).PrimaryKey(),
-			ddl.Column("org_id", ddl.BigInt()).NotNull(),
-			ddl.Column("email", ddl.VarChar(320)).NotNull(),
-		).
-		Constraints(
-			ddl.Unique("email").Named("users_email_key"),
-			ddl.ForeignKey("org_id").
-				References("orgs", "id").
-				OnDelete(ddl.Cascade),
-		),
-	ddl.CreateIndex("users_email_idx").
-		IfNotExists().
-		OnCols("users", "email"),
-}.Render(dialect.PostgreSQL{})
-```
+DDL rendering is dialect-aware and returns an error when a dialect cannot safely
+render a requested feature.
 
 ## Dialects
 
 qrafter currently includes:
 
-* `dialect.BaseDialect` for ANSI-style double-quoted identifiers and `?` placeholders
-* `dialect.PostgreSQL` for PostgreSQL-style `$1`, `$2`, ... placeholders
-* `dialect.MySQL` for backtick-quoted identifiers, MySQL `LIMIT`/`OFFSET`,
-  empty-row inserts, multi-table `UPDATE`/`DELETE`, and NULL ordering emulation
-* `dialect.SQLite` for SQLite literals, `LIMIT`/`OFFSET`, and fail-fast
-  handling for unsupported `DELETE USING`
-* `dialect.Oracle` for Oracle placeholders, boolean literals,
-  `OFFSET`/`FETCH`, and Oracle-specific DDL overrides
-* `dialect.SQLServer` for bracket-quoted identifiers, `@p1` placeholders,
-  `OFFSET`/`FETCH`, NULL ordering emulation, and SQL Server DDL overrides
 
-Rendering is intentionally centralized. Query and DDL builders store statement
-state; the compiler renders statements, expressions, clauses, and DDL nodes; a
-dialect supplies primitive rules such as identifier quoting, literals,
-placeholders, and `LIMIT`/`OFFSET`, and can override specific compiler nodes
-with `CompileNode`.
+dialect     | DML | DDL | migrations
+----------- |:---:|:---:|:----------:
+BaseDialect | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> |  -
+PostgreSQL  | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [x] </li></ul>
+MySQL       | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
+SQLite      | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
+Oracle      | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
+SQLServer   | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
 
-New dialects can start with the primitive methods and then override focused
-nodes for features such as `RETURNING`, `UPDATE` sources, `DELETE` sources,
-joins, default inserts, NULL ordering, partial indexes, and dialect-specific
-`ALTER TABLE` forms.
+## Examples
 
-New dialects can be added by implementing `dialect.Renderer`.
+More application-shaped examples live in [examples](examples):
 
-## Comparison
+- [database_sql](examples/database_sql) shows repository-style code with
+  `database/sql`.
+- [reporting](examples/reporting) builds a larger analytical query with joins,
+  grouping, a CTE, and a window function.
+- [schema](examples/schema) renders DDL for tables, constraints, indexes, and
+  table alterations.
+- [migrations](examples/migrations) is a standalone module with Docker Compose
+  that generates, applies, and reverts qrafter migrations against PostgreSQL.
 
-| Approach            | Good when                                             | Tradeoff                                                            |
-| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
-| Raw `database/sql`  | You want full control over every query                | SQL strings, placeholders, and column names are maintained manually |
-| SQL code generation | You want generated Go code from SQL files             | Adds a generation step and a SQL-first workflow                     |
-| ORM                 | You want high-level model and relationship management | SQL can become less explicit and harder to control                  |
-| qrafter             | You want typed SQL-shaped Go without ORM or codegen   | It is a lightweight query builder, not a full database framework    |
-
-## Project status
+## Project Status
 
 qrafter is pre-v1. The API may still change while the package evolves.
 
-Feedback is especially welcome around:
-
-* API naming
-* query composition ergonomics
-* dialect support
-* real-world usage with `database/sql` and `sqlx`
-
-## Contributing
-
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the local
 development workflow and pull request guidelines.
-
-Good first areas to explore:
-
-* Add examples for common query patterns
-* Improve dialect coverage
-* Expand integration tests
-* Polish package documentation on pkg.go.dev

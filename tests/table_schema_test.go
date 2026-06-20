@@ -12,7 +12,7 @@ import (
 )
 
 func TestPersonTableConfigToSchema(t *testing.T) {
-	schema := migrations.TableConfigToSchema[Person](dialect.PostgreSQL{})
+	schema := personSchema()
 	table := schema.Tables[0]
 
 	require.Equal(t, "public", table.Schema)
@@ -109,25 +109,10 @@ func TestPersonTableConfigToSchema(t *testing.T) {
 	)
 }
 
-func TestPersonSchemaRendersDDL(t *testing.T) {
-	schema := migrations.TableConfigToSchema[Person](dialect.PostgreSQL{})
-
-	sqlText, err := schema.DDL().Render(dialect.PostgreSQL{})
-	require.NoError(t, err)
-
-	for _, fragment := range []string{
-		`"status" TEXT NOT NULL DEFAULT 'pending'`,
-		`"is_admin" BOOLEAN NOT NULL DEFAULT false`,
-		`"is_verified" BOOLEAN NOT NULL DEFAULT FALSE`,
-		`"profile" JSONB NOT NULL DEFAULT '{}'::jsonb`,
-		`CONSTRAINT "pk_users" PRIMARY KEY ("id")`,
-		`CONSTRAINT "uq_users_org_email" UNIQUE ("org_id", "email")`,
-		`CONSTRAINT "fk_users_org" FOREIGN KEY ("org_id") REFERENCES "organizations" ("ID") ON DELETE RESTRICT ON UPDATE CASCADE`,
-		`CREATE INDEX "ix_users_status" ON "users" ("status")`,
-		`CREATE INDEX "ix_users_search_text_trgm" ON "users" USING gin (search_text gin_trgm_ops)`,
-	} {
-		assert.Contains(t, sqlText, fragment)
-	}
+func personSchema() migrations.Schema {
+	var schema migrations.Schema
+	migrations.RegisterTable[Person](&schema, dialect.PostgreSQL{})
+	return schema
 }
 
 func schemaColumnNames(columns []migrations.Column) []string {

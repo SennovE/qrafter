@@ -30,7 +30,7 @@ const (
 
 // MigrationApplyConfig configures registered migration execution.
 type MigrationApplyConfig struct {
-	DB MigrationApplyDatabase
+	DB migrationApplyDatabase
 
 	DriverName     string
 	DataSourceName string
@@ -43,8 +43,7 @@ type MigrationApplyConfig struct {
 	DisableTransaction bool
 }
 
-// MigrationApplyDatabase is implemented by *sql.DB, *sql.Tx, and *sql.Conn.
-type MigrationApplyDatabase interface {
+type migrationApplyDatabase interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
@@ -68,7 +67,7 @@ func ApplyMigrations(ctx context.Context, config *MigrationApplyConfig) (*Migrat
 		return nil, err
 	}
 
-	db, closeDB, err := migrationApplyDatabase(ctx, config)
+	db, closeDB, err := migrationApplyDatabaseConnection(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -154,10 +153,10 @@ func normalizeMigrationDirection(direction MigrationDirection) MigrationDirectio
 	return direction
 }
 
-func migrationApplyDatabase(
+func migrationApplyDatabaseConnection(
 	ctx context.Context,
 	config *MigrationApplyConfig,
-) (MigrationApplyDatabase, func() error, error) {
+) (migrationApplyDatabase, func() error, error) {
 	if config.DB != nil {
 		return config.DB, noopClose, nil
 	}
@@ -212,7 +211,7 @@ func migrationVersionTable(table string) string {
 
 func ensureMigrationVersionTable(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	table string,
 ) error {
@@ -236,7 +235,7 @@ func ensureMigrationVersionTable(
 
 func ensureMigrationVersionRow(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	table string,
 ) error {
@@ -256,7 +255,7 @@ func ensureMigrationVersionRow(
 
 func readCurrentMigrationVersion(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	table string,
 ) (string, error) {
@@ -276,7 +275,7 @@ func readCurrentMigrationVersion(
 
 func writeCurrentMigrationVersion(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	table string,
 	version string,
@@ -298,7 +297,7 @@ func writeCurrentMigrationVersion(
 
 func insertCurrentMigrationVersion(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	table string,
 	version string,
@@ -431,7 +430,7 @@ func downMigrationPlan(registry []Migration, currentIndex, targetIndex int) []pl
 
 func applyPlannedMigration(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	versionTable string,
 	planned plannedMigration,
@@ -470,7 +469,7 @@ func applyPlannedMigrationInTx(
 
 func applyPlannedMigrationOnDB(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	versionTable string,
 	planned plannedMigration,
@@ -494,7 +493,7 @@ func rollbackMigrationTx(tx *sql.Tx, cause error) error {
 
 func executeRegisteredMigration(
 	ctx context.Context,
-	db MigrationApplyDatabase,
+	db migrationApplyDatabase,
 	d dialect.Renderer,
 	migration Migration,
 	direction MigrationDirection,

@@ -55,7 +55,7 @@ func (u configSchemaUser) TableConfig() q.TableConfig { //nolint:gocritic // q.N
 }
 
 func TestTableConfigToSchemaTableUsesFullConfig(t *testing.T) {
-	schema := TableConfigToSchema[configSchemaUser](dialect.PostgreSQL{})
+	schema := schemaFromTableConfig[configSchemaUser](dialect.PostgreSQL{})
 	table := schema.Tables[0]
 
 	if table.Schema != "public" || table.Name != "users" {
@@ -145,7 +145,7 @@ func TestDiffSchemas(t *testing.T) {
 			},
 		},
 	}}
-	desired := TableConfigToSchema[configSchemaUser](dialect.PostgreSQL{})
+	desired := schemaFromTableConfig[configSchemaUser](dialect.PostgreSQL{})
 	desired.Tables = append(desired.Tables, Table{
 		Schema: "public",
 		Name:   "audit",
@@ -154,8 +154,8 @@ func TestDiffSchemas(t *testing.T) {
 		},
 	})
 
-	diff := DiffSchemas(current, desired)
-	if diff.IsEmpty() {
+	diff := diffSchemas(current, desired)
+	if diff.isEmpty() {
 		t.Fatal("diff is empty")
 	}
 	if len(diff.AddedTables) != 1 || diff.AddedTables[0].Name != "audit" {
@@ -230,7 +230,7 @@ func columnsToNames(columns []Column) []string {
 	return out
 }
 
-func columnDiffDesiredNames(diffs []ColumnDiff) []string {
+func columnDiffDesiredNames(diffs []columnDiff) []string {
 	out := make([]string, len(diffs))
 	for i := range diffs {
 		out[i] = diffs[i].Desired.Name
@@ -246,7 +246,7 @@ func constraintsToNames(constraints []Constraint) []string {
 	return out
 }
 
-func constraintDiffDesiredNames(diffs []ConstraintDiff) []string {
+func constraintDiffDesiredNames(diffs []constraintDiff) []string {
 	out := make([]string, len(diffs))
 	for i := range diffs {
 		out[i] = diffs[i].Desired.Name
@@ -262,7 +262,7 @@ func indexesToNames(indexes []Index) []string {
 	return out
 }
 
-func indexDiffDesiredNames(diffs []IndexDiff) []string {
+func indexDiffDesiredNames(diffs []indexDiff) []string {
 	out := make([]string, len(diffs))
 	for i := range diffs {
 		out[i] = diffs[i].Desired.Name

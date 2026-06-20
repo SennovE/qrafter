@@ -30,3 +30,16 @@ dialect, including PostgreSQL, MySQL, SQLite, Oracle, and SQL Server:
 ```sh
 go run ./examples/schema
 ```
+
+## migrations
+
+`migrations` is a standalone module with a PostgreSQL Docker Compose file and a
+ready qrafter migration config. It shows the full flow: start a database,
+generate a migration, apply it, and revert it.
+
+```sh
+cd examples/migrations
+docker compose up -d
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations revision --dir ./migrations --comment create_organizations_and_users
+go run github.com/SennovE/qrafter/cmd/qrafter-migrations up --dir ./migrations --to head
+```

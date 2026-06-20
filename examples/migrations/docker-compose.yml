@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "55432:5432"
+    environment:
+      POSTGRES_DB: qrafter_demo
+      POSTGRES_USER: qrafter
+      POSTGRES_PASSWORD: qrafter
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qrafter -d qrafter_demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - qrafter_migrations_pgdata:/var/lib/postgresql/data
+
+volumes:
+  qrafter_migrations_pgdata:

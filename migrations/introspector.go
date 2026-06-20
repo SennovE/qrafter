@@ -18,7 +18,7 @@ type Introspector interface {
 	ReadSchema(ctx context.Context, db Database) (Schema, error)
 }
 
-func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*SchemaDiff, error) {
+func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*schemaDiff, error) {
 	db, closeDB, err := migrationDatabase(ctx, config)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func getSchemaDiff(ctx context.Context, config *MigrationToolConfig) (*SchemaDif
 	current = withoutMigrationVersionTable(current, versionTable)
 	desired := cloneNormalizedSchema(config.Desired(config.Dialect))
 	desired = withoutMigrationVersionTable(desired, versionTable)
-	diff := DiffSchemas(current, desired)
+	diff := diffSchemas(current, desired)
 	return &diff, nil
 }
 

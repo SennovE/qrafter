@@ -2,41 +2,36 @@ package migrations
 
 import "github.com/SennovE/qrafter/ddl"
 
-// SchemaDiff describes changes needed to move Current database schema to
-// Desired user schema.
-type SchemaDiff struct {
+type schemaDiff struct {
 	AddedTables   []Table
 	RemovedTables []Table
-	ChangedTables []TableDiff
+	ChangedTables []tableDiff
 }
 
-// IsEmpty reports whether the schema snapshots are equal for diff purposes.
-func (d SchemaDiff) IsEmpty() bool {
+func (d schemaDiff) isEmpty() bool {
 	return len(d.AddedTables) == 0 &&
 		len(d.RemovedTables) == 0 &&
 		len(d.ChangedTables) == 0
 }
 
-// TableDiff describes changes inside one table.
-type TableDiff struct {
+type tableDiff struct {
 	Schema string
 	Name   string
 
 	AddedColumns   []Column
 	RemovedColumns []Column
-	ChangedColumns []ColumnDiff
+	ChangedColumns []columnDiff
 
 	AddedConstraints   []Constraint
 	RemovedConstraints []Constraint
-	ChangedConstraints []ConstraintDiff
+	ChangedConstraints []constraintDiff
 
 	AddedIndexes   []Index
 	RemovedIndexes []Index
-	ChangedIndexes []IndexDiff
+	ChangedIndexes []indexDiff
 }
 
-// IsEmpty reports whether the table snapshots are equal for diff purposes.
-func (d *TableDiff) IsEmpty() bool {
+func (d *tableDiff) isEmpty() bool {
 	return len(d.AddedColumns) == 0 &&
 		len(d.RemovedColumns) == 0 &&
 		len(d.ChangedColumns) == 0 &&
@@ -48,39 +43,29 @@ func (d *TableDiff) IsEmpty() bool {
 		len(d.ChangedIndexes) == 0
 }
 
-// ColumnDiff stores the current and desired versions of a changed column.
-type ColumnDiff struct {
+type columnDiff struct {
 	Current Column
 	Desired Column
 }
 
-// ConstraintDiff stores the current and desired versions of a changed
-// constraint.
-type ConstraintDiff struct {
+type constraintDiff struct {
 	Current Constraint
 	Desired Constraint
 }
 
-// IndexDiff stores the current and desired versions of a changed index.
-type IndexDiff struct {
+type indexDiff struct {
 	Current Index
 	Desired Index
 }
 
-// Diff compares the receiver as the current schema against desired.
-func (s Schema) Diff(desired Schema) SchemaDiff {
-	return DiffSchemas(s, desired)
-}
-
-// DiffSchemas compares current database schema against desired user schema.
-func DiffSchemas(current, desired Schema) SchemaDiff {
+func diffSchemas(current, desired Schema) schemaDiff {
 	current = cloneNormalizedSchema(current)
 	desired = cloneNormalizedSchema(desired)
 
 	currentTables := tablesByKey(current.Tables)
 	desiredTables := tablesByKey(desired.Tables)
 
-	diff := SchemaDiff{}
+	diff := schemaDiff{}
 	for i := range desired.Tables {
 		table := &desired.Tables[i]
 		key := tableKey{schema: table.Schema, table: table.Name}
@@ -91,7 +76,7 @@ func DiffSchemas(current, desired Schema) SchemaDiff {
 		}
 
 		tableDiff := diffTables(currentTable, table)
-		if !tableDiff.IsEmpty() {
+		if !tableDiff.isEmpty() {
 			diff.ChangedTables = append(diff.ChangedTables, tableDiff)
 		}
 	}
@@ -105,8 +90,8 @@ func DiffSchemas(current, desired Schema) SchemaDiff {
 	return diff
 }
 
-func diffTables(current, desired *Table) TableDiff {
-	diff := TableDiff{
+func diffTables(current, desired *Table) tableDiff {
+	diff := tableDiff{
 		Schema: desired.Schema,
 		Name:   desired.Name,
 	}
@@ -119,7 +104,7 @@ func diffTables(current, desired *Table) TableDiff {
 	return diff
 }
 
-func diffColumns(current, desired []Column) (added, removed []Column, changed []ColumnDiff) {
+func diffColumns(current, desired []Column) (added, removed []Column, changed []columnDiff) {
 	currentByName := make(map[string]int, len(current))
 	desiredByName := make(map[string]int, len(desired))
 	for i := range current {
@@ -136,7 +121,7 @@ func diffColumns(current, desired []Column) (added, removed []Column, changed []
 			continue
 		}
 		if !columnsEqual(&current[currentIdx], &desired[i]) {
-			changed = append(changed, ColumnDiff{Current: current[currentIdx], Desired: desired[i]})
+			changed = append(changed, columnDiff{Current: current[currentIdx], Desired: desired[i]})
 		}
 	}
 
@@ -150,7 +135,7 @@ func diffColumns(current, desired []Column) (added, removed []Column, changed []
 
 func diffConstraints(
 	current, desired []Constraint,
-) (added, removed []Constraint, changed []ConstraintDiff) {
+) (added, removed []Constraint, changed []constraintDiff) {
 	currentUsed := make([]bool, len(current))
 	desiredUsed := make([]bool, len(desired))
 
@@ -165,8 +150,8 @@ func diffConstraints(
 func matchConstraintsBySemantic(
 	current, desired []Constraint,
 	currentUsed, desiredUsed []bool,
-	changed []ConstraintDiff,
-) []ConstraintDiff {
+	changed []constraintDiff,
+) []constraintDiff {
 	semantic := make(map[string]int, len(current))
 	for i := range current {
 		semantic[constraintSemanticKey(&current[i])] = i
@@ -180,7 +165,7 @@ func matchConstraintsBySemantic(
 		currentUsed[j] = true
 		desiredUsed[i] = true
 		if constraintChanged(&current[j], &desired[i]) {
-			changed = append(changed, ConstraintDiff{Current: current[j], Desired: desired[i]})
+			changed = append(changed, constraintDiff{Current: current[j], Desired: desired[i]})
 		}
 	}
 	return changed
@@ -189,8 +174,8 @@ func matchConstraintsBySemantic(
 func matchConstraintsByName(
 	current, desired []Constraint,
 	currentUsed, desiredUsed []bool,
-	changed []ConstraintDiff,
-) []ConstraintDiff {
+	changed []constraintDiff,
+) []constraintDiff {
 	byName := make(map[string]int, len(current))
 	for i := range current {
 		if !currentUsed[i] && current[i].Name != "" {
@@ -208,7 +193,7 @@ func matchConstraintsByName(
 		currentUsed[j] = true
 		desiredUsed[i] = true
 		if constraintChanged(&current[j], &desired[i]) {
-			changed = append(changed, ConstraintDiff{Current: current[j], Desired: desired[i]})
+			changed = append(changed, constraintDiff{Current: current[j], Desired: desired[i]})
 		}
 	}
 	return changed
@@ -234,7 +219,7 @@ func unmatchedCurrentConstraints(current []Constraint, currentUsed []bool) []Con
 	return removed
 }
 
-func diffIndexes(current, desired []Index) (added, removed []Index, changed []IndexDiff) {
+func diffIndexes(current, desired []Index) (added, removed []Index, changed []indexDiff) {
 	currentByName := make(map[string]int, len(current))
 	desiredByName := make(map[string]int, len(desired))
 	for i := range current {
@@ -251,7 +236,7 @@ func diffIndexes(current, desired []Index) (added, removed []Index, changed []In
 			continue
 		}
 		if !indexesEqual(&current[currentIdx], &desired[i]) {
-			changed = append(changed, IndexDiff{Current: current[currentIdx], Desired: desired[i]})
+			changed = append(changed, indexDiff{Current: current[currentIdx], Desired: desired[i]})
 		}
 	}
 

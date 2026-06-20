@@ -9,9 +9,7 @@ import (
 	"github.com/SennovE/qrafter/dialect"
 )
 
-// TableConfigToSchema builds a normalized schema snapshot from a qrafter table
-// configuration and inferred column metadata.
-func TableConfigToSchema[T q.TableConfigProvider](d dialect.Renderer) Schema {
+func schemaFromTableConfig[T q.TableConfigProvider](d dialect.Renderer) Schema {
 	schema := Schema{Tables: []Table{tableConfigToSchema[T](d)}}
 	schema.normalize()
 	return schema

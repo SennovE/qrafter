@@ -99,17 +99,17 @@ func columnCode(column *Column) string {
 	w.WriteString(typeCode(column.ddlType()))
 	w.WriteString(")")
 	switch column.Identity {
-	case IdentityAlways:
+	case ddl.IdentityAlways:
 		w.WriteString(".IdentityAlways()")
-	case IdentityByDefault:
+	case ddl.IdentityByDefault:
 		w.WriteString(".IdentityByDefault()")
 	}
 	switch column.Generated {
-	case GeneratedStored:
+	case ddl.GeneratedStored:
 		w.WriteString(".GeneratedStored(")
 		w.WriteString(quoteCode(column.GeneratedExpr))
 		w.WriteString(")")
-	case GeneratedVirtual:
+	case ddl.GeneratedVirtual:
 		w.WriteString(".GeneratedVirtual(")
 		w.WriteString(quoteCode(column.GeneratedExpr))
 		w.WriteString(")")
@@ -117,7 +117,7 @@ func columnCode(column *Column) string {
 	if column.NotNull {
 		w.WriteString(".NotNull()")
 	}
-	if column.HasDefault && column.Identity == IdentityNone && column.Generated == GeneratedNone {
+	if column.HasDefault && column.Identity == ddl.IdentityNone && column.Generated == ddl.GeneratedNone {
 		w.WriteString(".DefaultExpr(")
 		w.WriteString(quoteCode(column.DefaultExpr))
 		w.WriteString(")")

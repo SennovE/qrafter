@@ -203,7 +203,7 @@ func readPostgreSQLColumns(
 		column.Identity = postgresIdentityKind(identity)
 		column.Generated = postgresGeneratedKind(generated)
 		if defaultExpr.Valid {
-			if column.Generated != GeneratedNone {
+			if column.Generated != ddl.GeneratedNone {
 				column.GeneratedExpr = defaultExpr.String
 			} else {
 				column.HasDefault = true
@@ -481,25 +481,25 @@ func normalizeSchemaNames(schemas []string) []string {
 	return normalized
 }
 
-func postgresIdentityKind(code string) IdentityKind {
+func postgresIdentityKind(code string) ddl.IdentityKind {
 	switch code {
 	case "a":
-		return IdentityAlways
+		return ddl.IdentityAlways
 	case "d":
-		return IdentityByDefault
+		return ddl.IdentityByDefault
 	default:
-		return IdentityNone
+		return ddl.IdentityNone
 	}
 }
 
-func postgresGeneratedKind(code string) GeneratedKind {
+func postgresGeneratedKind(code string) ddl.GeneratedKind {
 	switch code {
 	case "s":
-		return GeneratedStored
+		return ddl.GeneratedStored
 	case "v":
-		return GeneratedVirtual
+		return ddl.GeneratedVirtual
 	default:
-		return GeneratedNone
+		return ddl.GeneratedNone
 	}
 }
 

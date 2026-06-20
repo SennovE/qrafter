@@ -8,6 +8,13 @@ import (
 
 const configFilename = "qrafter_config.go"
 
+const (
+	dialectNamePostgres   = "postgres"
+	dialectNamePG         = "pg"
+	dialectNamePostgreSQL = "postgresql"
+	dialectNamePGX        = "pgx"
+)
+
 const configTemplate = `package migrations
 
 import (
@@ -96,7 +103,7 @@ func generateConfigCode(options *configOptions) ([]byte, error) {
 func dialectOptions(d string) (renderer, introspector string) {
 	d = strings.ToLower(d)
 	switch d {
-	case "postgres", "pg", "postgresql", "pgx":
+	case dialectNamePostgres, dialectNamePG, dialectNamePostgreSQL, dialectNamePGX:
 		return "dialect.PostgreSQL{}", `qmig.NewPostgreSQL(qmig.WithSchemas("public"))`
 	}
 	return "nil /* TODO: set dialect renderer manually */", "nil /* TODO: set database introspector manually */"

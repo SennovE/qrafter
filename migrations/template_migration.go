@@ -146,7 +146,7 @@ func renderGoTemplate(name, source string, data any) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func generateMigrationFileText(diff SchemaDiff, migrationNumber string) ([]byte, error) {
+func generateMigrationFileText(diff schemaDiff, migrationNumber string) ([]byte, error) {
 	steps := migrationSteps(diff)
 	return renderGoTemplate("migration", migrationTemplate, migrationTemplateData{
 		MigrationNumber: migrationNumber,

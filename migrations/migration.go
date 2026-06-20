@@ -9,7 +9,7 @@ type migrationStep struct {
 	downCode string
 }
 
-func migrationSteps(diff SchemaDiff) []migrationStep {
+func migrationSteps(diff schemaDiff) []migrationStep {
 	var steps []migrationStep
 	steps = appendAddedTableSteps(steps, diff.AddedTables)
 	steps = appendRemovedTableSteps(steps, diff.RemovedTables)
@@ -41,7 +41,7 @@ func appendRemovedTableSteps(steps []migrationStep, tables []Table) []migrationS
 	return steps
 }
 
-func appendTableDiffSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendTableDiffSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	steps = appendDroppedIndexSteps(steps, diff)
 	steps = appendDroppedConstraintSteps(steps, diff)
 	steps = appendRemovedColumnSteps(steps, diff)
@@ -52,7 +52,7 @@ func appendTableDiffSteps(steps []migrationStep, diff *TableDiff) []migrationSte
 	return steps
 }
 
-func appendDroppedIndexSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendDroppedIndexSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.RemovedIndexes {
 		steps = append(steps, dropIndexStep(&diff.RemovedIndexes[i]))
 	}
@@ -62,7 +62,7 @@ func appendDroppedIndexSteps(steps []migrationStep, diff *TableDiff) []migration
 	return steps
 }
 
-func appendDroppedConstraintSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendDroppedConstraintSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.RemovedConstraints {
 		steps = append(steps, dropConstraintStep(diff.Name, &diff.RemovedConstraints[i]))
 	}
@@ -72,28 +72,28 @@ func appendDroppedConstraintSteps(steps []migrationStep, diff *TableDiff) []migr
 	return steps
 }
 
-func appendRemovedColumnSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendRemovedColumnSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.RemovedColumns {
 		steps = append(steps, dropColumnStep(diff.Name, &diff.RemovedColumns[i]))
 	}
 	return steps
 }
 
-func appendAddedColumnSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendAddedColumnSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.AddedColumns {
 		steps = append(steps, addColumnStep(diff.Name, &diff.AddedColumns[i]))
 	}
 	return steps
 }
 
-func appendChangedColumnSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendChangedColumnSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.ChangedColumns {
 		steps = appendColumnChangeSteps(steps, diff.Name, &diff.ChangedColumns[i])
 	}
 	return steps
 }
 
-func appendAddedConstraintSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendAddedConstraintSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.ChangedConstraints {
 		steps = append(steps, addConstraintStep(diff.Name, &diff.ChangedConstraints[i].Desired))
 	}
@@ -103,7 +103,7 @@ func appendAddedConstraintSteps(steps []migrationStep, diff *TableDiff) []migrat
 	return steps
 }
 
-func appendCreatedIndexSteps(steps []migrationStep, diff *TableDiff) []migrationStep {
+func appendCreatedIndexSteps(steps []migrationStep, diff *tableDiff) []migrationStep {
 	for i := range diff.ChangedIndexes {
 		steps = append(steps, createIndexStep(&diff.ChangedIndexes[i].Desired))
 	}
@@ -113,7 +113,7 @@ func appendCreatedIndexSteps(steps []migrationStep, diff *TableDiff) []migration
 	return steps
 }
 
-func appendColumnChangeSteps(steps []migrationStep, table string, diff *ColumnDiff) []migrationStep {
+func appendColumnChangeSteps(steps []migrationStep, table string, diff *columnDiff) []migrationStep {
 	if columnDefinitionModeChanged(&diff.Current, &diff.Desired) {
 		return append(steps, replaceColumnStep(table, diff))
 	}
@@ -138,7 +138,7 @@ func columnDefinitionModeChanged(current, desired *Column) bool {
 
 func createTableStep(table *Table) migrationStep {
 	return migrationStep{
-		up:       table.CreateTable(),
+		up:       table.createTable(),
 		down:     ddl.DropTable(table.Name),
 		upCode:   createTableCode(table),
 		downCode: dropTableCode(table.Name),
@@ -148,7 +148,7 @@ func createTableStep(table *Table) migrationStep {
 func dropTableStep(table *Table) migrationStep {
 	return migrationStep{
 		up:       ddl.DropTable(table.Name),
-		down:     table.CreateTable(),
+		down:     table.createTable(),
 		upCode:   dropTableCode(table.Name),
 		downCode: createTableCode(table),
 	}
@@ -156,7 +156,7 @@ func dropTableStep(table *Table) migrationStep {
 
 func createIndexStep(index *Index) migrationStep {
 	return migrationStep{
-		up:       index.CreateIndex(),
+		up:       index.createIndex(),
 		down:     ddl.DropIndex(index.Name),
 		upCode:   createIndexCode(index),
 		downCode: dropIndexCode(index.Name),
@@ -165,7 +165,7 @@ func createIndexStep(index *Index) migrationStep {
 
 func restoreIndexStep(index *Index) migrationStep {
 	return migrationStep{
-		down:     index.CreateIndex(),
+		down:     index.createIndex(),
 		downCode: createIndexCode(index),
 	}
 }
@@ -173,7 +173,7 @@ func restoreIndexStep(index *Index) migrationStep {
 func dropIndexStep(index *Index) migrationStep {
 	return migrationStep{
 		up:       ddl.DropIndex(index.Name),
-		down:     index.CreateIndex(),
+		down:     index.createIndex(),
 		upCode:   dropIndexCode(index.Name),
 		downCode: createIndexCode(index),
 	}
@@ -181,7 +181,7 @@ func dropIndexStep(index *Index) migrationStep {
 
 func addColumnStep(table string, column *Column) migrationStep {
 	return migrationStep{
-		up:       ddl.AlterTable(table).AddColumn(column.ColumnDef()),
+		up:       ddl.AlterTable(table).AddColumn(column.columnDef()),
 		down:     ddl.AlterTable(table).DropColumn(column.Name),
 		upCode:   addColumnCode(table, column),
 		downCode: dropColumnCode(table, column.Name),
@@ -191,26 +191,26 @@ func addColumnStep(table string, column *Column) migrationStep {
 func dropColumnStep(table string, column *Column) migrationStep {
 	return migrationStep{
 		up:       ddl.AlterTable(table).DropColumn(column.Name),
-		down:     ddl.AlterTable(table).AddColumn(column.ColumnDef()),
+		down:     ddl.AlterTable(table).AddColumn(column.columnDef()),
 		upCode:   dropColumnCode(table, column.Name),
 		downCode: addColumnCode(table, column),
 	}
 }
 
-func replaceColumnStep(table string, diff *ColumnDiff) migrationStep {
+func replaceColumnStep(table string, diff *columnDiff) migrationStep {
 	return migrationStep{
 		up: ddl.AlterTable(table).
 			DropColumn(diff.Current.Name).
-			AddColumn(diff.Desired.ColumnDef()),
+			AddColumn(diff.Desired.columnDef()),
 		down: ddl.AlterTable(table).
 			DropColumn(diff.Desired.Name).
-			AddColumn(diff.Current.ColumnDef()),
+			AddColumn(diff.Current.columnDef()),
 		upCode:   replaceColumnCode(table, diff.Current.Name, &diff.Desired),
 		downCode: replaceColumnCode(table, diff.Desired.Name, &diff.Current),
 	}
 }
 
-func alterColumnTypeStep(table string, diff *ColumnDiff) migrationStep {
+func alterColumnTypeStep(table string, diff *columnDiff) migrationStep {
 	return migrationStep{
 		up:       ddl.AlterTable(table).AlterColumnType(diff.Desired.Name, diff.Desired.ddlType()),
 		down:     ddl.AlterTable(table).AlterColumnType(diff.Current.Name, diff.Current.ddlType()),
@@ -219,7 +219,7 @@ func alterColumnTypeStep(table string, diff *ColumnDiff) migrationStep {
 	}
 }
 
-func changeNotNullStep(table string, diff *ColumnDiff) migrationStep {
+func changeNotNullStep(table string, diff *columnDiff) migrationStep {
 	return migrationStep{
 		up:       notNullStatement(table, &diff.Desired),
 		down:     notNullStatement(table, &diff.Current),
@@ -228,7 +228,7 @@ func changeNotNullStep(table string, diff *ColumnDiff) migrationStep {
 	}
 }
 
-func changeDefaultStep(table string, diff *ColumnDiff) migrationStep {
+func changeDefaultStep(table string, diff *columnDiff) migrationStep {
 	return migrationStep{
 		up:       defaultStatement(table, &diff.Desired),
 		down:     defaultStatement(table, &diff.Current),
@@ -240,7 +240,7 @@ func changeDefaultStep(table string, diff *ColumnDiff) migrationStep {
 func addConstraintStep(table string, constraint *Constraint) migrationStep {
 	name := constraintDropName(table, constraint)
 	return migrationStep{
-		up:       ddl.AlterTable(table).AddConstraint(constraint.TableConstraint()),
+		up:       ddl.AlterTable(table).AddConstraint(constraint.tableConstraint()),
 		down:     ddl.AlterTable(table).DropConstraint(name),
 		upCode:   addConstraintCode(table, constraint),
 		downCode: dropConstraintCode(table, name),
@@ -251,7 +251,7 @@ func dropConstraintStep(table string, constraint *Constraint) migrationStep {
 	name := constraintDropName(table, constraint)
 	return migrationStep{
 		up:       ddl.AlterTable(table).DropConstraint(name),
-		down:     ddl.AlterTable(table).AddConstraint(constraint.TableConstraint()),
+		down:     ddl.AlterTable(table).AddConstraint(constraint.tableConstraint()),
 		upCode:   dropConstraintCode(table, name),
 		downCode: addConstraintCode(table, constraint),
 	}
