@@ -173,12 +173,12 @@ qrafter currently includes:
 
 dialect     | DML | DDL | migrations
 ----------- |:---:|:---:|:----------:
-BaseDialect | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> |  -
-PostgreSQL  | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [x] </li></ul>
-MySQL       | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
-SQLite      | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
-Oracle      | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
-SQLServer   | <ul><li>- [x] </li></ul>  | <ul><li>- [x] </li></ul> | <ul><li>- [ ] </li></ul>
+BaseDialect | yes | yes | n/a
+PostgreSQL  | yes | yes | yes
+MySQL       | yes | yes | no
+SQLite      | yes | yes | no
+Oracle      | yes | yes | no
+SQLServer   | yes | yes | no
 
 ## Examples
 
