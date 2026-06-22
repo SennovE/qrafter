@@ -2,52 +2,76 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        go-version: [ '1.18.x', 'stable' ]
+        go-version: ["1.18.x", stable]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-        cache: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: false
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v ./...
 
-    - name: Test root package
-      run: go test -v ./...
+      - name: Test
+        run: go test -v ./...
 
-    - name: Test compatibility package
-      if: matrix.go-version == 'stable'
-      working-directory: ./tests
-      run: go test -v ./...
+      - name: Test compatibility module
+        if: matrix.go-version == 'stable'
+        working-directory: ./tests
+        run: go test -v ./...
+
+      - name: Coverage
+        if: matrix.go-version == 'stable'
+        run: |
+          go test ./... \
+            -vet=off \
+            -count=1 \
+            -covermode=count \
+            -coverpkg=github.com/SennovE/qrafter/... \
+            -coverprofile=coverage.profile
+
+          go tool cover -func=coverage.profile -o=coverage.out
+
+          total=$(awk '/^total:/ { gsub("%", "", $3); print $3 }' coverage.out)
+          echo "total coverage: ${total}%"
+
+      - name: Upload coverage to Coveralls
+        if: matrix.go-version == 'stable' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ github.token }}
+          file: coverage.profile
+          format: golang
 
   lint:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-        cache: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
 
-    - name: Lint
-      uses: golangci/golangci-lint-action@v7
-      with:
-        version: v2.9.0
-        working-directory: ./
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0

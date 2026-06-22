@@ -15,6 +15,7 @@ const (
 	// DefaultMigrationVersionTable is used to store the current migration version.
 	DefaultMigrationVersionTable = "qrafter_schema_version"
 	baseMigrationVersion         = ""
+	baseMigrationTarget          = "base"
 	headMigrationVersion         = "head"
 )
 
@@ -343,7 +344,7 @@ func headTarget(registry []Migration) string {
 }
 
 func isBaseMigrationTarget(target string) bool {
-	return target == "0" || strings.EqualFold(target, "base")
+	return target == "0" || strings.EqualFold(target, baseMigrationTarget)
 }
 
 type plannedMigration struct {
@@ -525,7 +526,7 @@ func executeRegisteredMigration(
 
 func displayVersion(version string) string {
 	if version == baseMigrationVersion {
-		return "base"
+		return baseMigrationTarget
 	}
 	return version
 }

@@ -7,17 +7,18 @@ import (
 	"github.com/SennovE/qrafter/ddl"
 )
 
+//nolint:goconst // database type aliases are clearer inline
 var postgreSQLSimpleTypes = map[string]func() ddl.Type{
 	"smallint":                    ddl.SmallInt,
 	"int2":                        ddl.SmallInt,
 	"integer":                     ddl.Integer,
-	"int":                         ddl.Integer, //nolint:goconst // database type aliases are clearer inline
+	"int":                         ddl.Integer,
 	"int4":                        ddl.Integer,
 	"bigint":                      ddl.BigInt,
 	"int8":                        ddl.BigInt,
 	"text":                        ddl.Text,
 	"boolean":                     ddl.Boolean,
-	"bool":                        ddl.Boolean, //nolint:goconst // database type aliases are clearer inline
+	"bool":                        ddl.Boolean,
 	"date":                        ddl.Date,
 	"time":                        ddl.Time,
 	"time without time zone":      ddl.Time,

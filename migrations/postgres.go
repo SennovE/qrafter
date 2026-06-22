@@ -154,7 +154,7 @@ func readPostgreSQLColumns(
 	tables map[tableKey]*Table,
 	version int,
 ) error {
-	generatedColumn := "''"
+	generatedColumn := "''" //nolint:goconst // used as SQL fallback literal for PostgreSQL versions before 12.
 	if version >= 120000 {
 		generatedColumn = "a.attgenerated::text"
 	}
