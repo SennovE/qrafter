@@ -1,0 +1,39 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: false
+
+    - name: Test library packages with coverage
+      run: |
+        set -euo pipefail
+        packages=$(go list ./... | grep -Ev '/(cmd|examples)(/|$)')
+        coverpkg=$(printf '%s\n' "$packages" | paste -sd, -)
+        go test $packages -covermode=atomic -coverpkg="$coverpkg" -coverprofile=coverage.out
+
+    - name: Check coverage threshold
+      env:
+        MIN_COVERAGE: "25"
+      run: |
+        total=$(go tool cover -func=coverage.out | awk '/^total:/ { gsub("%", "", $3); print $3 }')
+        echo "total coverage: ${total}%"
+        awk -v total="$total" -v min="$MIN_COVERAGE" 'BEGIN { if (total + 0 < min + 0) exit 1 }'
+
+    - name: Test compatibility module with coverage
+      working-directory: ./tests
+      run: go test ./... -cover

@@ -2,6 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/SennovE/qrafter.svg)](https://pkg.go.dev/github.com/SennovE/qrafter)
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
+[![Coverage](https://github.com/SennovE/qrafter/actions/workflows/test-coverage.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/test-coverage.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/SennovE/qrafter)](https://goreportcard.com/report/github.com/SennovE/qrafter)
 
 qrafter is a fluent, type-safe SQL toolkit for Go. It gives you typed query
