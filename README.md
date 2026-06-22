@@ -4,6 +4,7 @@
 [![Go CI](https://github.com/SennovE/qrafter/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/SennovE/qrafter/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/SennovE/qrafter/badge.svg?branch=main)](https://coveralls.io/github/SennovE/qrafter?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/SennovE/qrafter)](https://goreportcard.com/report/github.com/SennovE/qrafter)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 
 qrafter is a fluent, type-safe SQL toolkit for Go. It gives you typed query
 composition, DDL builders, schema introspection, and generated Go migrations
